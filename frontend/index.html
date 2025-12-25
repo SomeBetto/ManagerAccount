@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Manager</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="background-orb orb-1"></div>
+    <div class="background-orb orb-2"></div>
+
+    <div class="app-container">
+        <nav class="sidebar">
+            <div class="logo">
+                <i class="fa-solid fa-gamepad"></i>
+                <span>Nexus</span>
+            </div>
+            <ul class="nav-links">
+                <li class="active" onclick="switchView('accounts')"><i class="fa-solid fa-users"></i> Accounts</li>
+                <li onclick="switchView('characters')"><i class="fa-solid fa-user-shield"></i> Characters</li>
+            </ul>
+        </nav>
+
+        <main class="main-content">
+            <header>
+                <div style="display:flex; align-items:center; gap:15px;">
+                    <h1 id="page-title">Accounts <span id="account-count"
+                            style="font-size:1rem; opacity:0.7; font-weight:400;">(0)</span></h1>
+                    <button class="icon-btn" onclick="openConfigModal()"
+                        style="background:rgba(255,255,255,0.1); width:35px; height:35px; border-radius:50%;"
+                        title="Settings">
+                        <i class="fa-solid fa-gear"></i>
+                    </button>
+
+                    <button id="btn-upload-accounts" class="icon-btn" onclick="triggerUpload('accounts')"
+                        style="background:rgba(255,255,255,0.1); width:35px; height:35px; border-radius:50%; display:inline-flex;"
+                        title="Import Accounts CSV">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                    </button>
+                    <input type="file" id="upload-accounts" hidden onchange="handleFileUpload('accounts', event)">
+
+                    <button id="btn-delete-selected" class="icon-btn" onclick="deleteSelectedAccounts()"
+                        style="background:rgba(239, 68, 68, 0.2); color:#ef4444; width:35px; height:35px; border-radius:50%; display:none; border-color:rgba(239, 68, 68, 0.4);"
+                        title="Delete Selected">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+
+                    <button id="btn-upload-characters" class="icon-btn" onclick="triggerUpload('characters')"
+                        style="background:rgba(255,255,255,0.1); width:35px; height:35px; border-radius:50%; display:none;"
+                        title="Import Characters CSV">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                    </button>
+                </div>
+                <button class="btn-primary" onclick="openModal()">
+                    <i class="fa-solid fa-plus"></i> Add New
+                </button>
+            </header>
+
+            <div id="accounts-view" class="view-section active">
+                <div class="card-grid" id="accounts-grid">
+                    <!-- Accounts interpolated here -->
+                </div>
+            </div>
+
+            <div id="characters-view" class="view-section">
+                <!-- Hidden Upload Input for Characters -->
+                <input type="file" id="upload-characters" hidden onchange="handleFileUpload('characters', event)">
+
+                <div class="filter-bar">
+                    <div class="filter-group">
+                        <select id="sort-by" onchange="renderCharacters()">
+                            <option value="name">Sort by Name</option>
+                            <option value="level">Sort by Level</option>
+                            <option value="class">Sort by Class</option>
+                        </select>
+                        <select id="account-filter" onchange="renderCharacters()">
+                            <option value="">All Accounts</option>
+                        </select>
+                        <select id="type-filter" onchange="renderCharacters()">
+                            <option value="">All Types</option>
+                            <!-- Dynamic options -->
+                        </select>
+                        <input type="number" id="level-filter" placeholder="Target Level" oninput="renderCharacters()"
+                            style="padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.05); color: white; width: 120px;">
+                    </div>
+                </div>
+                <div class="card-grid" id="characters-grid">
+                    <!-- Characters interpolated here -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal -->
+    <div id="item-modal" class="modal">
+        <div class="modal-content glass-panel">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2 id="modal-title">New Account</h2>
+            <form id="item-form">
+                <!-- Dynamic Fields -->
+            </form>
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
+                <button type="button" class="btn-primary" onclick="submitForm()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Config Modal -->
+    <div id="config-modal" class="modal">
+        <div class="modal-content glass-panel" style="max-width: 400px;">
+            <span class="close" onclick="closeConfigModal()">&times;</span>
+            <h2>Settings</h2>
+            <div class="form-group">
+                <label>Level Threshold (+/-)</label>
+                <input type="number" id="config-threshold" value="0">
+                <small style="color:rgba(255,255,255,0.5); display:block; margin-top:5px;">
+                    Used when filtering by "Target Level". Shows characters within this range.
+                </small>
+            </div>
+
+            <hr style="border:0; border-top:1px solid rgba(255,255,255,0.1); margin: 15px 0;">
+
+            <div class="form-group">
+                <label>Character Types</label>
+                <div style="display:flex; gap:5px; margin-bottom:10px;">
+                    <input type="text" id="new-type-input" placeholder="New Type (e.g. Tank)" style="flex:1;">
+                    <button type="button" class="btn-primary" onclick="addCharType()" style="padding:0 10px;"><i
+                            class="fa-solid fa-plus"></i></button>
+                </div>
+                <div id="config-types-list" style="display:flex; flex-wrap:wrap; gap:5px;">
+                    <!-- Tags injected here -->
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" onclick="closeConfigModal()">Close</button>
+                <button type="button" class="btn-primary" onclick="saveConfig()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
