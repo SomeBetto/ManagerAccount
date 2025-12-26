@@ -26,6 +26,7 @@
                 <li class="active" onclick="switchView('accounts')"><i class="fa-solid fa-users"></i> Accounts</li>
                 <li onclick="switchView('characters')"><i class="fa-solid fa-user-shield"></i> Characters</li>
                 <li onclick="switchView('levelzone')"><i class="fa-solid fa-chart-line"></i> LevelZone</li>
+                <li onclick="switchView('dailyevent')"><i class="fa-solid fa-calendar-days"></i> Daily Event</li>
             </ul>
         </nav>
 
@@ -110,6 +111,18 @@
                     <!-- Level Entries -->
                 </div>
             </div>
+
+            <div id="dailyevent-view" class="view-section">
+                <header style="margin-bottom:1rem; display:flex; justify-content:space-between; align-items:center;">
+                    <h2>Daily Events</h2>
+                    <button class="btn-primary" onclick="openDailyEventModal()">
+                        <i class="fa-solid fa-plus"></i> New Event
+                    </button>
+                </header>
+                <div class="card-grid" id="dailyevent-grid">
+                    <!-- Daily Events -->
+                </div>
+            </div>
         </main>
     </div>
 
@@ -136,6 +149,80 @@
             <div class="modal-actions">
                 <button class="btn-secondary" onclick="closeLevelModal()">Cancel</button>
                 <button class="btn-primary" onclick="submitLevelAdd()">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Event Modal -->
+    <div id="dailyevent-modal" class="modal">
+        <div class="modal-content glass-panel">
+            <span class="close" onclick="closeDailyEventModal()">&times;</span>
+            <h2>New Daily Event</h2>
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" id="de-name-input">
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="de-desc-input" rows="2"
+                    style="width:100%; padding:0.75rem; background:rgba(15,23,42,0.5); border:1px solid rgba(255,255,255,0.1); border-radius:10px; color:white;"></textarea>
+            </div>
+            <div class="form-group" style="display:flex; gap:10px;">
+                <div style="flex:1;">
+                    <label>Start Date</label>
+                    <input type="date" id="de-start-input">
+                </div>
+                <div style="flex:1;">
+                    <label>End Date</label>
+                    <input type="date" id="de-end-input">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="closeDailyEventModal()">Cancel</button>
+                <button class="btn-primary" onclick="submitDailyEvent()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Event Details Modal -->
+    <div id="event-details-modal" class="modal">
+        <div class="modal-content glass-panel" style="max-width:900px; width:95%;">
+            <span class="close" onclick="closeEventDetailsModal()">&times;</span>
+            <header style="margin-bottom:1rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:10px;">
+                <h2 id="ed-title">Event Name</h2>
+                <p id="ed-desc" style="opacity:0.7; font-size:0.9rem;"></p>
+                <p id="ed-dates" style="opacity:0.5; font-size:0.8rem;"></p>
+            </header>
+
+            <div style="margin-bottom:1rem; display:flex; justify-content:space-between; align-items:center;">
+                <h3>Participants</h3>
+                <button class="btn-primary" onclick="openAddParticipantModal()"
+                    style="padding:0.3rem 0.8rem; font-size:0.9rem;">
+                    <i class="fa-solid fa-user-plus"></i> Add Character
+                </button>
+            </div>
+
+            <div class="card-grid" id="ed-participants-grid"
+                style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
+                <!-- Participants cards interpolated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Participant Modal -->
+    <div id="add-participant-modal" class="modal" style="z-index: 1002;">
+        <div class="modal-content glass-panel" style="max-width:400px;">
+            <span class="close" onclick="closeAddParticipantModal()">&times;</span>
+            <h2>Add Participant</h2>
+            <div class="form-group">
+                <label>Select Character</label>
+                <select id="ap-char-select" style="width:100%;">
+                    <!-- Options -->
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="closeAddParticipantModal()">Cancel</button>
+                <button class="btn-primary" onclick="submitAddParticipant()">Add</button>
             </div>
         </div>
     </div>

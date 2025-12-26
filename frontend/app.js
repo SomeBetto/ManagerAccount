@@ -14,11 +14,13 @@ const modalTitle = document.getElementById('modal-title');
 const pageTitle = document.getElementById('page-title');
 const accountCount = document.getElementById('account-count'); // Placeholder if needed globally
 const levelZoneView = document.getElementById('levelzone-view');
+const dailyEventView = document.getElementById('dailyevent-view');
 
 // Init
 document.addEventListener('DOMContentLoaded', () => {
     fetchAccounts();
     updateTypeOptions();
+    // Pre-fetch events if needed? Or just when view switches.
 });
 
 // Navigation
@@ -31,20 +33,30 @@ function switchView(view) {
         accountsView.classList.add('active');
         charactersView.classList.remove('active');
         if (levelZoneView) levelZoneView.classList.remove('active');
+        if (dailyEventView) dailyEventView.classList.remove('active');
         pageTitle.innerHTML = `Accounts <span id="account-count" style="font-size:1rem; opacity:0.7; font-weight:400;">(${accounts.length})</span>`;
         fetchAccounts();
     } else if (view === 'characters') {
         accountsView.classList.remove('active');
         charactersView.classList.add('active');
         if (levelZoneView) levelZoneView.classList.remove('active');
+        if (dailyEventView) dailyEventView.classList.remove('active');
         pageTitle.innerHTML = `Characters <span id="char-count" style="font-size:1rem; opacity:0.7; font-weight:400;">(${characters.length})</span>`;
         fetchAccounts().then(() => fetchCharacters());
     } else if (view === 'levelzone') {
         accountsView.classList.remove('active');
         charactersView.classList.remove('active');
         if (levelZoneView) levelZoneView.classList.add('active');
+        if (dailyEventView) dailyEventView.classList.remove('active');
         pageTitle.innerHTML = `LevelZone`;
         fetchCharacters().then(() => fetchLevelQueue());
+    } else if (view === 'dailyevent') {
+        accountsView.classList.remove('active');
+        charactersView.classList.remove('active');
+        if (levelZoneView) levelZoneView.classList.remove('active');
+        if (dailyEventView) dailyEventView.classList.add('active');
+        pageTitle.innerHTML = `Daily Events`;
+        fetchDailyEvents();
     }
     updateHeaderButtons(view);
     updateHeaderButtons(view);
@@ -728,4 +740,277 @@ async function submitLevelAdd() {
             alert('Error adding to queue');
         }
     } catch (e) { console.error(e); }
+}
+
+// ---------------------------------------------------------
+// Daily Event Logic
+// ---------------------------------------------------------
+let dailyEvents = [];
+let currentEventId = null;
+
+function fetchDailyEvents() {
+    fetch(`${API_URL}/daily-events`)
+        .then(res => res.json())
+        .then(data => {
+            dailyEvents = data;
+            renderDailyEvents();
+        })
+        .catch(err => console.error(err));
+}
+
+function renderDailyEvents() {
+    const grid = document.getElementById('dailyevent-grid');
+    grid.innerHTML = dailyEvents.map(event => `
+        <div class="card event-card" onclick="openEventDetailsModal(${event.id})">
+            <div class="card-header">
+                <h3>${event.name}</h3>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <span class="badge badge-date">${formatDate(event.start_date)} - ${formatDate(event.end_date)}</span>
+                    <button class="icon-btn delete" onclick="deleteDailyEvent(${event.id}, event)" style="z-index:10;"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            </div>
+            <div class="card-body">
+                <p style="opacity:0.8; margin-bottom:1rem;">${event.description || 'No description'}</p>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:0.9rem; opacity:0.6;"><i class="fa-solid fa-users"></i> ${event.participants_count} Participants</span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function deleteDailyEvent(id, e) {
+    if (e) e.stopPropagation();
+    if (!confirm('Are you sure you want to delete this event?')) return;
+
+    fetch(`${API_URL}/daily-events/${id}`, {
+        method: 'DELETE'
+    })
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) alert(data.error);
+            else fetchDailyEvents();
+        })
+        .catch(err => console.error(err));
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '???';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString();
+}
+
+function openDailyEventModal() {
+    document.getElementById('dailyevent-modal').classList.add('show');
+}
+
+function closeDailyEventModal() {
+    document.getElementById('dailyevent-modal').classList.remove('show');
+}
+
+function submitDailyEvent() {
+    const name = document.getElementById('de-name-input').value;
+    const desc = document.getElementById('de-desc-input').value;
+    const start = document.getElementById('de-start-input').value;
+    const end = document.getElementById('de-end-input').value;
+
+    if (!name || !start || !end) {
+        alert('Name, Start Date, and End Date are required.');
+        return;
+    }
+
+    fetch(`${API_URL}/daily-events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, description: desc, start_date: start, end_date: end })
+    })
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) alert(data.error);
+            else {
+                closeDailyEventModal();
+                fetchDailyEvents();
+            }
+        })
+        .catch(err => console.error(err));
+}
+
+// Event Details & Participants
+function openEventDetailsModal(eventId) {
+    currentEventId = eventId;
+    const event = dailyEvents.find(e => e.id === eventId);
+    if (!event) return;
+
+    document.getElementById('ed-title').textContent = event.name;
+    document.getElementById('ed-desc').textContent = event.description || '';
+    document.getElementById('ed-dates').textContent = `${formatDate(event.start_date)} - ${formatDate(event.end_date)}`;
+
+    document.getElementById('event-details-modal').classList.add('show');
+    fetchEventParticipants(eventId);
+}
+
+function closeEventDetailsModal() {
+    document.getElementById('event-details-modal').classList.remove('show');
+    currentEventId = null;
+    fetchDailyEvents(); // Refresh in case counts changed
+}
+
+function fetchEventParticipants(eventId) {
+    fetch(`${API_URL}/daily-events/${eventId}/participants`)
+        .then(res => res.json())
+        .then(data => {
+            renderEventParticipants(data, eventId);
+        });
+}
+
+function renderEventParticipants(participants, eventId) {
+    const grid = document.getElementById('ed-participants-grid');
+    const event = dailyEvents.find(e => e.id === eventId);
+
+    // Calculate dates array
+    const dates = getDatesInRange(event.start_date, event.end_date);
+
+    grid.innerHTML = participants.map(p => {
+        // Build checklist
+        const checks = dates.map(dateStr => {
+            const progress = p.progress.find(prog => prog.event_date === dateStr);
+            const mid = progress ? progress.id : null;
+            const checked = progress ? progress.is_completed : false;
+
+            // Just display day number or date? Let's verify format.
+            // dateStr is assumed YYYY-MM-DD
+            const displayDate = new Date(dateStr).getDate();
+            // Fix timezone issue for display:
+            // Actually getDatesInRange produces simple YYYY-MM-DD strings.
+            // new Date(dateStr) treats as UTC or Local? If hyphenated, usually UTC.
+            const dateObj = new Date(dateStr + 'T12:00:00');
+            const dayNum = dateObj.getDate();
+
+            return `
+                <div class="day-check" 
+                     onclick="toggleEventProgress(${p.id}, '${dateStr}', ${!checked}, event)"
+                     style="
+                        width:25px; height:25px; 
+                        border:1px solid rgba(255,255,255,0.2); 
+                        border-radius:4px; 
+                        display:flex; justify-content:center; align-items:center;
+                        cursor:pointer;
+                        background: ${checked ? '#22c55e' : 'rgba(255,255,255,0.05)'};
+                        color: white;
+                        font-size: 0.8rem;
+                     "
+                     title="${dateStr}">
+                    ${dayNum}
+                </div>
+            `;
+        }).join('');
+
+        return `
+        <div class="card participant-card" style="padding:1rem;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+                <h4 style="margin:0;">${p.character_name} <span style="font-size:0.8rem; opacity:0.6; font-weight:normal;">(${p.character_class})</span></h4>
+                <button class="icon-btn" onclick="removeParticipant(${p.id})" style="color:#ef4444; width:25px; height:25px; min-height:0;"><i class="fa-solid fa-trash"></i></button>
+            </div>
+            
+            <div style="display:flex; gap:10px; margin-bottom:1rem;">
+                <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyToClipboard('${p.account_email}')"><i class="fa-solid fa-envelope"></i> Email</button>
+                <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyCharacterPassword(${p.character_id})"><i class="fa-solid fa-key"></i> Pass</button>
+            </div>
+
+            <div style="display:flex; flex-wrap:wrap; gap:5px;">
+                ${checks}
+            </div>
+        </div>
+        `;
+    }).join('');
+}
+
+function getDatesInRange(startDate, endDate) {
+    if (!startDate || !endDate) return [];
+
+    // Parse as local dates relative to user provided string to avoid timezone shifts
+    // Assuming API returns 'YYYY-MM-DD'
+    const start = new Date(startDate + 'T12:00:00');
+    const end = new Date(endDate + 'T12:00:00');
+
+    const dates = [];
+    let current = new Date(start);
+
+    while (current <= end) {
+        dates.push(current.toISOString().split('T')[0]);
+        current.setDate(current.getDate() + 1);
+    }
+    return dates;
+}
+
+function toggleEventProgress(participantId, dateStr, newState, e) {
+    if (e) e.stopPropagation(); // Prevent card click?
+
+    fetch(`${API_URL}/daily-events/progress`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            participant_id: participantId,
+            date: dateStr,
+            completed: newState
+        })
+    })
+        .then(res => res.json())
+        .then(data => {
+            if (!data.error) {
+                // Optimistic update or refresh? Refresh is safer
+                fetchEventParticipants(currentEventId);
+            }
+        });
+}
+
+function openAddParticipantModal() {
+    // Populate char select
+    const select = document.getElementById('ap-char-select');
+    select.innerHTML = '<option value="">Loading...</option>';
+
+    fetch(`${API_URL}/characters`)
+        .then(res => res.json())
+        .then(chars => {
+            select.innerHTML = chars.map(c => `
+                <option value="${c.id}">${c.name} (Lvl ${c.level || '?'}) - ${c.class_name || '?'}</option>
+            `).join('');
+        });
+
+    document.getElementById('add-participant-modal').classList.add('show');
+}
+
+function closeAddParticipantModal() {
+    document.getElementById('add-participant-modal').classList.remove('show');
+}
+
+function submitAddParticipant() {
+    const charId = document.getElementById('ap-char-select').value;
+    if (!charId || !currentEventId) return;
+
+    fetch(`${API_URL}/daily-events/${currentEventId}/participants`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ character_id: charId })
+    })
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) alert(data.error);
+            else {
+                closeAddParticipantModal();
+                fetchEventParticipants(currentEventId);
+            }
+        });
+}
+
+function removeParticipant(participantId) {
+    if (!confirm('Remove participant?')) return;
+
+    fetch(`${API_URL}/daily-events/participants/${participantId}`, {
+        method: 'DELETE'
+    })
+        .then(res => res.json())
+        .then(() => {
+            fetchEventParticipants(currentEventId);
+        });
 }
