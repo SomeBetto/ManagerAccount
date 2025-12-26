@@ -38,3 +38,23 @@ class Character(db.Model):
             'class_name': self.class_name,
             'char_type': self.char_type
         }
+
+class LevelEntry(db.Model):
+    __tablename__ = 'level_entries'
+    id = db.Column(db.Integer, primary_key=True)
+    character_id = db.Column(db.Integer, db.ForeignKey('characters.id'), nullable=False, unique=True)
+    priority = db.Column(db.Integer, default=0)
+    note = db.Column(db.String(500))
+    
+    # Relationship
+    character = db.relationship('Character', backref=db.backref('level_entry', uselist=False))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'character_id': self.character_id,
+            'character_name': self.character.name if self.character else 'Unknown',
+            'account_email': self.character.account.email if self.character and self.character.account else 'Unknown',
+            'priority': self.priority,
+            'note': self.note
+        }

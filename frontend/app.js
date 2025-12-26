@@ -13,6 +13,7 @@ const form = document.getElementById('item-form');
 const modalTitle = document.getElementById('modal-title');
 const pageTitle = document.getElementById('page-title');
 const accountCount = document.getElementById('account-count'); // Placeholder if needed globally
+const levelZoneView = document.getElementById('levelzone-view');
 
 // Init
 document.addEventListener('DOMContentLoaded', () => {
@@ -29,20 +30,23 @@ function switchView(view) {
     if (view === 'accounts') {
         accountsView.classList.add('active');
         charactersView.classList.remove('active');
+        if (levelZoneView) levelZoneView.classList.remove('active');
         pageTitle.innerHTML = `Accounts <span id="account-count" style="font-size:1rem; opacity:0.7; font-weight:400;">(${accounts.length})</span>`;
         fetchAccounts();
-    } else {
+    } else if (view === 'characters') {
         accountsView.classList.remove('active');
         charactersView.classList.add('active');
+        if (levelZoneView) levelZoneView.classList.remove('active');
         pageTitle.innerHTML = `Characters <span id="char-count" style="font-size:1rem; opacity:0.7; font-weight:400;">(${characters.length})</span>`;
-
-        // Hack: Append Import Button for Characters if not exists logic can be complex in vanilla JS 
-        // simpler to just hide/show buttons if we had them in HTML, but consistent with current structure:
-        // We will just let the "Import CSV" button in header be context aware or add another one?
-        // Let's add specific handling in updateHeader() if we had one.
-        // For simplicity: We will just toggle visibility of a new button we add to HTML in next step.
-        fetchAccounts().then(() => fetchCharacters()); // Ensure accounts loaded for filter
+        fetchAccounts().then(() => fetchCharacters());
+    } else if (view === 'levelzone') {
+        accountsView.classList.remove('active');
+        charactersView.classList.remove('active');
+        if (levelZoneView) levelZoneView.classList.add('active');
+        pageTitle.innerHTML = `LevelZone`;
+        fetchCharacters().then(() => fetchLevelQueue());
     }
+    updateHeaderButtons(view);
     updateHeaderButtons(view);
 }
 
@@ -607,4 +611,121 @@ async function deleteSelectedAccounts() {
         console.error(e);
         alert('Batch delete failed');
     }
+}
+
+// LevelZone Logic
+let levelQueue = [];
+
+async function fetchLevelQueue() {
+    try {
+        const res = await fetch(`${API_URL}/leveling`);
+        levelQueue = await res.json();
+        renderLevelQueue();
+    } catch (e) { console.error(e); }
+}
+
+function renderLevelQueue() {
+    const grid = document.getElementById('level-grid');
+    const search = document.getElementById('level-search').value.toLowerCase();
+
+    // Filter
+    let list = levelQueue;
+    if (search) {
+        list = list.filter(e => e.character_name.toLowerCase().includes(search) || (e.note && e.note.toLowerCase().includes(search)));
+    }
+
+    grid.innerHTML = list.map(entry => `
+        <div class="card">
+            <div class="card-bar" style="justify-content:space-between; display:flex;">
+                <span style="font-weight:bold; color:var(--primary); font-size:1.1rem;">#${entry.priority}</span>
+                <button class="icon-btn delete" onclick="removeFromLevelQueue(${entry.id})"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="card-header" style="padding-top:0;">
+                <div class="card-title">${entry.character_name}</div>
+            </div>
+            <div class="card-content">
+                <p>Account <span class="value">${entry.account_email}</span></p>
+                <div style="margin-top:10px;">
+                    <label style="font-size:0.8rem; color:rgba(255,255,255,0.5);">Priority</label>
+                    <input type="number" value="${entry.priority}" onchange="updateLevelEntry(${entry.id}, 'priority', this.value)" style="width:100%; padding:5px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); color:white; border-radius:4px;">
+                </div>
+                <div style="margin-top:10px;">
+                    <label style="font-size:0.8rem; color:rgba(255,255,255,0.5);">Note</label>
+                    <textarea onchange="updateLevelEntry(${entry.id}, 'note', this.value)" rows="3" style="width:100%; padding:5px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); color:white; border-radius:4px; max-width:100%; min-width:100%;">${entry.note || ''}</textarea>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Search Listener
+document.getElementById('level-search')?.addEventListener('input', renderLevelQueue);
+
+async function updateLevelEntry(id, field, value) {
+    try {
+        await fetch(`${API_URL}/leveling/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ [field]: value })
+        });
+        // Silent update unless error
+        // Update local state to avoid jumpy re-render
+        const entry = levelQueue.find(e => e.id === id);
+        if (entry) {
+            if (field === 'priority') entry.priority = parseInt(value);
+            if (field === 'note') entry.note = value;
+        }
+    } catch (e) { console.error(e); }
+}
+
+async function removeFromLevelQueue(id) {
+    if (!confirm('Remove from leveling queue?')) return;
+    try {
+        await fetch(`${API_URL}/leveling/${id}`, { method: 'DELETE' });
+        fetchLevelQueue();
+    } catch (e) { console.error(e); }
+}
+
+// Level Modal
+function openLevelModal() {
+    // Populate select
+    const select = document.getElementById('level-char-select');
+    // Exclude chars already in queue
+    const queuedIds = new Set(levelQueue.map(e => e.character_id));
+    const available = characters.filter(c => !queuedIds.has(c.id));
+
+    select.innerHTML = available.map(c => `<option value="${c.id}">${c.name} (${c.class_name || '?'})</option>`).join('');
+
+    document.getElementById('level-modal').classList.add('show');
+}
+
+function closeLevelModal() {
+    document.getElementById('level-modal').classList.remove('show');
+}
+
+async function submitLevelAdd() {
+    const charId = document.getElementById('level-char-select').value;
+    const priority = document.getElementById('level-priority-input').value;
+    const note = document.getElementById('level-note-input').value;
+
+    if (!charId) return alert('Select a character');
+
+    try {
+        const res = await fetch(`${API_URL}/leveling`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                character_id: charId,
+                priority: parseInt(priority),
+                note: note
+            })
+        });
+
+        if (res.ok) {
+            closeLevelModal();
+            fetchLevelQueue();
+        } else {
+            alert('Error adding to queue');
+        }
+    } catch (e) { console.error(e); }
 }

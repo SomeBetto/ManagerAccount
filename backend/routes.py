@@ -216,3 +216,63 @@ def upload_characters():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 400
+
+# LevelZone Routes
+from models import LevelEntry
+
+@api_bp.route('/leveling', methods=['GET'])
+def get_level_queue():
+    entries = LevelEntry.query.join(Character).order_by(LevelEntry.priority.desc()).all()
+    return jsonify([e.to_dict() for e in entries])
+
+@api_bp.route('/leveling', methods=['POST'])
+def add_to_level_queue():
+    data = request.json
+    char_id = data.get('character_id')
+    if not char_id:
+        return jsonify({'error': 'Character ID required'}), 400
+        
+    # Check if exists
+    if LevelEntry.query.filter_by(character_id=char_id).first():
+        return jsonify({'error': 'Character already in queue'}), 400
+        
+    try:
+        new_entry = LevelEntry(
+            character_id=char_id,
+            priority=data.get('priority', 0),
+            note=data.get('note', '')
+        )
+        db.session.add(new_entry)
+        db.session.commit()
+        return jsonify(new_entry.to_dict()), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
+@api_bp.route('/leveling/<int:id>', methods=['PUT'])
+def update_level_entry(id):
+    entry = LevelEntry.query.get_or_404(id)
+    data = request.json
+    
+    if 'priority' in data:
+        entry.priority = int(data['priority'])
+    if 'note' in data:
+        entry.note = str(data['note'])[:500] # Cap at 500 chars
+        
+    try:
+        db.session.commit()
+        return jsonify(entry.to_dict())
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
+@api_bp.route('/leveling/<int:id>', methods=['DELETE'])
+def delete_level_entry(id):
+    entry = LevelEntry.query.get_or_404(id)
+    try:
+        db.session.delete(entry)
+        db.session.commit()
+        return jsonify({'message': 'Removed from queue'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400

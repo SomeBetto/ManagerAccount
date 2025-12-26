@@ -14,3 +14,10 @@ CREATE TABLE IF NOT EXISTS characters (
     class_name VARCHAR(100),
     char_type VARCHAR(50)
 );
+
+CREATE TABLE IF NOT EXISTS level_entries (
+    id SERIAL PRIMARY KEY,
+    character_id INTEGER REFERENCES characters(id) ON DELETE CASCADE UNIQUE,
+    priority INTEGER DEFAULT 0,
+    note VARCHAR(500)
+);

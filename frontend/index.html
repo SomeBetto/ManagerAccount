@@ -25,6 +25,7 @@
             <ul class="nav-links">
                 <li class="active" onclick="switchView('accounts')"><i class="fa-solid fa-users"></i> Accounts</li>
                 <li onclick="switchView('characters')"><i class="fa-solid fa-user-shield"></i> Characters</li>
+                <li onclick="switchView('levelzone')"><i class="fa-solid fa-chart-line"></i> LevelZone</li>
             </ul>
         </nav>
 
@@ -95,7 +96,48 @@
                     <!-- Characters interpolated here -->
                 </div>
             </div>
+            <div id="levelzone-view" class="view-section">
+                <header style="margin-bottom:1rem; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="flex:1;">
+                        <input type="text" id="level-search" placeholder="Search leveling queue..."
+                            style="padding:0.75rem; width:100%; max-width:300px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px; color:white;">
+                    </div>
+                    <button class="btn-primary" onclick="openLevelModal()">
+                        <i class="fa-solid fa-plus"></i> Add Char to Queue
+                    </button>
+                </header>
+                <div class="card-grid" id="level-grid">
+                    <!-- Level Entries -->
+                </div>
+            </div>
         </main>
+    </div>
+
+    <!-- Add to Level Modal -->
+    <div id="level-modal" class="modal">
+        <div class="modal-content glass-panel">
+            <span class="close" onclick="closeLevelModal()">&times;</span>
+            <h2>Add to LevelZone</h2>
+            <div class="form-group">
+                <label>Select Character</label>
+                <select id="level-char-select" style="width:100%; margin-bottom:1rem;">
+                    <!-- Options -->
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Initial Priority</label>
+                <input type="number" id="level-priority-input" value="1" min="1">
+            </div>
+            <div class="form-group">
+                <label>Note</label>
+                <textarea id="level-note-input" rows="3" placeholder="Max 500 chars"
+                    style="width:100%; padding:0.75rem; background:rgba(15,23,42,0.5); border:1px solid rgba(255,255,255,0.1); border-radius:10px; color:white;"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="closeLevelModal()">Cancel</button>
+                <button class="btn-primary" onclick="submitLevelAdd()">Add</button>
+            </div>
+        </div>
     </div>
 
     <!-- Modal -->
