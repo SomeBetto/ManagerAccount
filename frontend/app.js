@@ -122,7 +122,13 @@ function renderAccounts() {
             </div>
             <div class="card-content">
                 <p>ID <span class="value">#${acc.id}</span></p>
-                <p>PIN <span class="value">${acc.pin || 'N/A'}</span></p>
+                <p>PIN 
+                    <span class="value" style="display:flex; align-items:center; gap:5px;">
+                        <span id="acc-pin-${acc.id}">****</span>
+                        <i class="fa-solid fa-eye" style="cursor:pointer; font-size:0.8rem;" onclick="togglePin(${acc.id})" title="Toggle PIN"></i>
+                        <i class="fa-solid fa-copy" style="cursor:pointer; font-size:0.8rem;" onclick="copyAccountPin(${acc.id})" title="Copy PIN"></i>
+                    </span>
+                </p>
                 <p>Pass 
                     <span class="value" style="display:flex; align-items:center; gap:5px;">
                         <span id="acc-pass-${acc.id}">******</span>
@@ -262,9 +268,15 @@ function renderCharacters() {
     const accountId = document.getElementById('account-filter')?.value;
     const type = document.getElementById('type-filter')?.value;
     const targetLevelStr = document.getElementById('level-filter')?.value;
+    const nameSearch = document.getElementById('name-filter')?.value.toLowerCase();
     const sortBy = document.getElementById('sort-by')?.value;
 
     let list = [...characters];
+
+    // Filter by Name
+    if (nameSearch) {
+        list = list.filter(c => c.name.toLowerCase().includes(nameSearch));
+    }
 
     // Filter by Account
     if (accountId) {
@@ -548,6 +560,21 @@ function togglePassword(id) {
     } else {
         el.innerText = '******';
     }
+}
+
+function togglePin(id) {
+    const el = document.getElementById(`acc-pin-${id}`);
+    if (el.innerText === '****') {
+        const acc = accounts.find(a => a.id === id);
+        el.innerText = (acc && acc.pin) ? acc.pin : 'N/A';
+    } else {
+        el.innerText = '****';
+    }
+}
+
+function copyAccountPin(id) {
+    const acc = accounts.find(a => a.id === id);
+    if (acc) copyToClipboard(acc.pin);
 }
 
 // CSV Import Logic
