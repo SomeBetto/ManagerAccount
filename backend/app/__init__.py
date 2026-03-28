@@ -1,22 +1,30 @@
+import os
 from flask import Flask, send_from_directory
 from .config import Config
-from .extensions import db, cors
+from .extensions import cors
+from .excel_db import ExcelDB
 
 def create_app(config_class=Config):
-    app = Flask(__name__, static_folder='/frontend', template_folder='/frontend')
+    # Identify root folder structure dynamically for Windows Native vs Docker Linux volumes
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    FRONTEND_DIR = os.path.join(BASE_DIR, 'frontend')
+
+    app = Flask(__name__, static_folder=FRONTEND_DIR, template_folder=FRONTEND_DIR)
     app.config.from_object(config_class)
 
     # Initialize Extensions
-    db.init_app(app)
     cors.init_app(app)
 
     # Register Blueprints
-    from .routes import accounts_bp, characters_bp, leveling_bp, events_bp
+    from .routes import accounts_bp, characters_bp, leveling_bp, events_bp, items_bp, config_bp, coupons_bp
     
     app.register_blueprint(accounts_bp)
     app.register_blueprint(characters_bp)
     app.register_blueprint(leveling_bp)
     app.register_blueprint(events_bp)
+    app.register_blueprint(items_bp)
+    app.register_blueprint(config_bp)
+    app.register_blueprint(coupons_bp)
 
     # Root Routes (Static Files)
     @app.route('/')
@@ -28,14 +36,12 @@ def create_app(config_class=Config):
     def static_files(path):
         return send_from_directory(app.static_folder, path)
     
-    # DB Creation Hack (for now, to preserve existing logic)
+    # Init Excel DB
     with app.app_context():
-        # Import models so they are registered with SQLAlchemy
-        from . import models
         try:
-             db.create_all()
-             print("Database initialized.")
+             ExcelDB.init_db()
+             print("Excel Database initialized.")
         except Exception as e:
-             print(f"DB Init Error: {e}")
+             print(f"Excel DB Init Error: {e}")
 
     return app

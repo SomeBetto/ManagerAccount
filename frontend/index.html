@@ -4,10 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nexus Manager</title>
+    <title>Flyff Manager</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="flyff.ico" type="image/x-icon">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -19,27 +20,37 @@
     <div class="app-container">
         <nav class="sidebar">
             <div class="logo">
-                <i class="fa-solid fa-gamepad"></i>
-                <span>Nexus</span>
+                <img src="flyff.ico" alt="Flyff Logo" style="width: 32px; height: 32px; object-fit: contain;">
+                <span>Flyff</span>
             </div>
             <ul class="nav-links">
-                <li class="active" onclick="switchView('accounts')"><i class="fa-solid fa-users"></i> Accounts</li>
-                <li onclick="switchView('characters')"><i class="fa-solid fa-user-shield"></i> Characters</li>
-                <li onclick="switchView('levelzone')"><i class="fa-solid fa-chart-line"></i> LevelZone</li>
-                <li onclick="switchView('dailyevent')"><i class="fa-solid fa-calendar-days"></i> Daily Event</li>
+                <li onclick="switchView('accounts')" class="active"><i class="fa-solid fa-user-shield"></i> <span
+                        data-i18n="sidebar_accounts">Accounts</span></li>
+                <li onclick="switchView('characters')"><i class="fa-solid fa-users"></i> <span
+                        data-i18n="sidebar_characters">Characters</span></li>
+                <li onclick="switchView('favorites')"><i class="fa-solid fa-star"></i> <span
+                        data-i18n="sidebar_favorites">Favorites</span></li>
+                <li onclick="switchView('items')"><i class="fa-solid fa-toolbox"></i> <span
+                        data-i18n="sidebar_items">Important Items</span></li>
+                <li onclick="switchView('vacantes')"><i class="fa-solid fa-door-open"></i> <span
+                        data-i18n="sidebar_vacantes">Vacantes</span></li>
+                <li onclick="switchView('levelzone')"><i class="fa-solid fa-person-falling"></i> <span
+                        data-i18n="sidebar_levelzone">Leveling Zone</span></li>
+                <li onclick="switchView('dailyevent')"><i class="fa-solid fa-calendar-day"></i> <span
+                        data-i18n="sidebar_dailyevent">Daily Events</span></li>
+                <li onclick="switchView('coupons')"><i class="fa-solid fa-ticket"></i> <span
+                        data-i18n="sidebar_coupons">Coupons</span></li>
             </ul>
+            <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">
+                <i class="fa-solid fa-chevron-left"></i>
+            </button>
         </nav>
 
         <main class="main-content">
             <header>
                 <div style="display:flex; align-items:center; gap:15px;">
-                    <h1 id="page-title">Accounts <span id="account-count"
+                    <h1 id="page-title"><span data-i18n="header_accounts">Accounts</span> <span id="account-count"
                             style="font-size:1rem; opacity:0.7; font-weight:400;">(0)</span></h1>
-                    <button class="icon-btn" onclick="openConfigModal()"
-                        style="background:rgba(255,255,255,0.1); width:35px; height:35px; border-radius:50%;"
-                        title="Settings">
-                        <i class="fa-solid fa-gear"></i>
-                    </button>
 
                     <button id="btn-upload-accounts" class="icon-btn" onclick="triggerUpload('accounts')"
                         style="background:rgba(255,255,255,0.1); width:35px; height:35px; border-radius:50%; display:inline-flex;"
@@ -60,8 +71,16 @@
                         <i class="fa-solid fa-cloud-arrow-up"></i>
                     </button>
                 </div>
-                <button class="btn-primary" onclick="openModal()">
-                    <i class="fa-solid fa-plus"></i> Add New
+                <button class="btn-primary" onclick="openModal('account')" id="btn-upload-accounts"
+                    style="display:inline-flex;">
+                    <i class="fa-solid fa-plus"></i> <span data-i18n="btn_add_account">New Account</span>
+                </button>
+                <button class="btn-primary" onclick="openModal('character')" id="btn-upload-characters"
+                    style="display:none;">
+                    <i class="fa-solid fa-plus"></i> <span data-i18n="btn_add_character">New Character</span>
+                </button>
+                <button class="btn-secondary" onclick="openConfigModal()">
+                    <i class="fa-solid fa-gear"></i> <span data-i18n="btn_settings">Settings</span>
                 </button>
             </header>
 
@@ -99,6 +118,27 @@
                     <!-- Characters interpolated here -->
                 </div>
             </div>
+            <div id="favorites-view" class="view-section">
+                <div class="card-grid" id="favorites-grid">
+                    <!-- Favorite characters interpolated here -->
+                </div>
+            </div>
+
+            <div id="items-view" class="view-section">
+                <header style="margin-bottom:1rem; display:flex; justify-content:space-between; align-items:center;">
+                    <h2>Important Items</h2>
+                </header>
+                <div class="card-grid" id="items-grid">
+                    <!-- Items interpolated here -->
+                </div>
+            </div>
+
+            <div id="vacantes-view" class="view-section">
+                <div class="card-grid" id="vacantes-grid">
+                    <!-- Vacantes interpolated here -->
+                </div>
+            </div>
+
             <div id="levelzone-view" class="view-section">
                 <header style="margin-bottom:1rem; display:flex; justify-content:space-between; align-items:center;">
                     <div style="flex:1;">
@@ -125,6 +165,26 @@
                     <!-- Daily Events -->
                 </div>
             </div>
+
+            <!-- Coupons View -->
+            <section id="coupons-view" class="view-section">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem;">
+                    <button class="btn-primary" onclick="openCouponCreateModal()"><i class="fa-solid fa-plus"></i> New
+                        Coupon</button>
+                </div>
+
+                <!-- Step Indicators (Optional visual) -->
+                <div id="coupon-step-container"
+                    style="display:none; margin-bottom:1.5rem; background:rgba(255,255,255,0.03); padding:15px; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
+                    <p id="coupon-step-text" style="font-weight:600; color:var(--primary);"></p>
+                    <button class="btn-secondary" onclick="resetCouponFlow()"
+                        style="margin-top:10px; padding:5px 15px; font-size:0.8rem;">Cancel / Go Back</button>
+                </div>
+
+                <div id="coupons-grid" class="grid">
+                    <!-- Coupon cards or Account/Char list during flow -->
+                </div>
+            </section>
         </main>
     </div>
 
@@ -229,6 +289,32 @@
         </div>
     </div>
 
+    <!-- Vacante Details Modal -->
+    <div id="vacante-details-modal" class="modal">
+        <div class="modal-content glass-panel" style="max-width:900px; width:95%;">
+            <span class="close" onclick="closeVacanteModal()">&times;</span>
+            <header style="margin-bottom:1rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:10px;">
+                <h2 id="vd-title">Account Email</h2>
+                <div id="vd-credentials"
+                    style="display:flex; gap:15px; margin-top:5px; margin-bottom:5px; color:var(--primary);">
+                    <!-- Copy buttons injected here -->
+                </div>
+                <p style="opacity:0.7;">Capacidad: <span id="vd-count">0</span> / 3 personajes</p>
+            </header>
+
+            <div style="margin-bottom:1rem; display:flex; justify-content:space-between; align-items:center;">
+                <h3>Personajes</h3>
+                <button class="btn-primary" onclick="openPreFilledCharacterModal()">
+                    <i class="fa-solid fa-user-plus"></i> Añadir Personaje
+                </button>
+            </div>
+
+            <div class="card-grid" id="vd-characters-grid">
+                <!-- Character cards interpolated here -->
+            </div>
+        </div>
+    </div>
+
     <!-- Modal -->
     <div id="item-modal" class="modal">
         <div class="modal-content glass-panel">
@@ -248,13 +334,40 @@
     <div id="config-modal" class="modal">
         <div class="modal-content glass-panel" style="max-width: 400px;">
             <span class="close" onclick="closeConfigModal()">&times;</span>
-            <h2>Settings</h2>
+            <h2 data-i18n="settings_title">Settings</h2>
             <div class="form-group">
-                <label>Level Threshold (+/-)</label>
+                <label data-i18n="settings_db_path">Excel Database Path</label>
+                <div style="display:flex; gap:5px;">
+                    <input type="text" id="config-db-path" placeholder="C:\Users\...\Flyff V2.xlsx" style="flex:1;">
+                    <button type="button" class="btn-primary" onclick="browseExcelPath()" style="padding:0 15px;" data-i18n="btn_browse">Buscar</button>
+                    <button type="button" class="btn-secondary" onclick="browseAndCreateExcel()" style="padding:0 10px; border-color:var(--primary); color:var(--primary);" data-i18n="btn_create_new" title="Crear desde cero">Crear Nuevo</button>
+                </div>
+                <small style="color:rgba(255,255,255,0.5); display:block; margin-top:5px;" data-i18n="settings_db_help">
+                    Ruta absoluta al archivo .xlsx. Si no existe o le faltan pestañas (accounts, characters...), el
+                    sistema las creará.
+                </small>
+            </div>
+
+            <hr style="border:0; border-top:1px solid rgba(255,255,255,0.1); margin: 15px 0;">
+
+            <div class="form-group">
+                <label data-i18n="settings_threshold">Level Threshold (+/-)</label>
                 <input type="number" id="config-threshold" value="0">
-                <small style="color:rgba(255,255,255,0.5); display:block; margin-top:5px;">
+                <small style="color:rgba(255,255,255,0.5); display:block; margin-top:5px;"
+                    data-i18n="settings_threshold_help">
                     Used when filtering by "Target Level". Shows characters within this range.
                 </small>
+            </div>
+
+            <hr style="border:0; border-top:1px solid rgba(255,255,255,0.1); margin: 15px 0;">
+
+            <div class="form-group">
+                <label data-i18n="settings_lang">Language</label>
+                <select id="config-lang" onchange="setLanguage(this.value)"
+                    style="width:100%; padding:0.75rem; background:rgba(15,23,42,0.5); border:1px solid rgba(255,255,255,0.1); border-radius:10px; color:white;">
+                    <option value="en" data-i18n="settings_lang_en">English</option>
+                    <option value="es" data-i18n="settings_lang_es">Spanish</option>
+                </select>
             </div>
 
             <hr style="border:0; border-top:1px solid rgba(255,255,255,0.1); margin: 15px 0;">
@@ -272,8 +385,46 @@
             </div>
 
             <div class="modal-actions">
-                <button type="button" class="btn-secondary" onclick="closeConfigModal()">Close</button>
-                <button type="button" class="btn-primary" onclick="saveConfig()">Save</button>
+                <button type="button" class="btn-secondary" onclick="closeConfigModal()"
+                    data-i18n="modal_close">Close</button>
+                <button type="button" class="btn-primary" onclick="saveConfig()" data-i18n="modal_save">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Coupon Modal (Create) -->
+    <div id="coupon-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeCouponModal()">&times;</span>
+            <h2 style="margin-bottom:1.5rem;">New Coupon</h2>
+            <form id="coupon-form">
+                <div class="form-group">
+                    <label>Coupon Name</label>
+                    <input type="text" id="coupon-name" required placeholder="e.g. Easter Event 2026">
+                </div>
+                <div class="form-group">
+                    <label>Code</label>
+                    <input type="text" id="coupon-code" required placeholder="EASTER26">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="coupon-desc" rows="3" placeholder="What does this coupon give?"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="closeCouponModal()">Cancel</button>
+                    <button type="submit" class="btn-primary">Create Coupon</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Redeemed Characters Modal -->
+    <div id="redeemed-modal" class="modal">
+        <div class="modal-content" style="max-width:800px;">
+            <span class="close" onclick="closeRedeemedModal()">&times;</span>
+            <h2 id="redeemed-modal-title" style="margin-bottom:1.5rem;">Redeemed By</h2>
+            <div id="redeemed-chars-grid" class="grid">
+                <!-- Redeemed character cards -->
             </div>
         </div>
     </div>

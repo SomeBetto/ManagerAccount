@@ -1,90 +1,93 @@
 from flask import Blueprint, request, jsonify
-from app.extensions import db
-from app.models.event import DailyEvent, DailyEventParticipant, DailyEventProgress
-from datetime import datetime
+from app.excel_db import ExcelDB
 
 bp = Blueprint('daily_events', __name__, url_prefix='/api/daily-events')
 
 @bp.route('', methods=['GET'])
 def get_daily_events():
-    events = DailyEvent.query.all()
-    return jsonify([e.to_dict() for e in events])
+    try:
+        events = ExcelDB.get_all('daily_events')
+        return jsonify(events)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
 @bp.route('', methods=['POST'])
 def create_daily_event():
     data = request.json
     try:
-        event = DailyEvent(
-            name=data['name'],
-            description=data.get('description'),
-            start_date=datetime.strptime(data['start_date'], '%Y-%m-%d').date(),
-            end_date=datetime.strptime(data['end_date'], '%Y-%m-%d').date()
-        )
-        db.session.add(event)
-        db.session.commit()
-        return jsonify(event.to_dict()), 201
+        new_event = {
+            'name': data['name'],
+            'description': data.get('description', ''),
+            'start_date': data['start_date'],
+            'end_date': data['end_date']
+        }
+        inserted = ExcelDB.insert('daily_events', new_event)
+        return jsonify(inserted), 201
     except Exception as e:
-        db.session.rollback()
         return jsonify({'error': str(e)}), 400
 
 @bp.route('/<int:id>', methods=['PUT'])
 def update_daily_event(id):
-    event = DailyEvent.query.get_or_404(id)
     data = request.json
     try:
-        if 'name' in data: event.name = data['name']
-        if 'description' in data: event.description = data['description']
-        if 'start_date' in data: event.start_date = datetime.strptime(data['start_date'], '%Y-%m-%d').date()
-        if 'end_date' in data: event.end_date = datetime.strptime(data['end_date'], '%Y-%m-%d').date()
+        event = ExcelDB.get_by_id('daily_events', id)
+        if not event: return jsonify({'error': 'Not found'}), 404
         
-        db.session.commit()
-        return jsonify(event.to_dict())
+        update_data = {}
+        if 'name' in data: update_data['name'] = data['name']
+        if 'description' in data: update_data['description'] = data['description']
+        if 'start_date' in data: update_data['start_date'] = data['start_date']
+        if 'end_date' in data: update_data['end_date'] = data['end_date']
+        
+        updated = ExcelDB.update('daily_events', id, update_data)
+        return jsonify(updated)
     except Exception as e:
-        db.session.rollback()
         return jsonify({'error': str(e)}), 400
 
 @bp.route('/<int:id>', methods=['DELETE'])
 def delete_daily_event(id):
-    event = DailyEvent.query.get_or_404(id)
     try:
-        db.session.delete(event)
-        db.session.commit()
-        return jsonify({'message': 'Event deleted'})
+        if ExcelDB.delete('daily_events', id):
+            return jsonify({'message': 'Event deleted'})
+        return jsonify({'error': 'Not found'}), 404
     except Exception as e:
-        db.session.rollback()
         return jsonify({'error': str(e)}), 400
 
 # Parts & Progress
 @bp.route('/<int:id>/participants', methods=['GET'])
 def get_event_participants(id):
-    event = DailyEvent.query.get_or_404(id)
-    return jsonify([p.to_dict() for p in event.participants])
+    try:
+        parts = ExcelDB.get_all('daily_event_participants')
+        filtered = [p for p in parts if p.get('event_id') == id]
+        return jsonify(filtered)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
 @bp.route('/<int:id>/participants', methods=['POST'])
 def add_participant(id):
     data = request.json
     try:
-        # Check duplicacy handled by DB constraint unique
-        part = DailyEventParticipant(
-            event_id=id,
-            character_id=data['character_id']
-        )
-        db.session.add(part)
-        db.session.commit()
-        return jsonify(part.to_dict()), 201
+        # Check duplicacy 
+        parts = ExcelDB.get_all('daily_event_participants')
+        if any(p.get('event_id') == id and p.get('character_id') == data['character_id'] for p in parts):
+            return jsonify({'error': 'Already a participant'}), 400
+
+        new_part = {
+            'event_id': id,
+            'character_id': data['character_id']
+        }
+        inserted = ExcelDB.insert('daily_event_participants', new_part)
+        return jsonify(inserted), 201
     except Exception as e:
-        db.session.rollback()
         return jsonify({'error': str(e)}), 400
 
 @bp.route('/participants/<int:id>', methods=['DELETE'])
 def remove_participant(id):
-    part = DailyEventParticipant.query.get_or_404(id)
     try:
-        db.session.delete(part)
-        db.session.commit()
-        return jsonify({'message': 'Participant removed'})
+        if ExcelDB.delete('daily_event_participants', id):
+            return jsonify({'message': 'Participant removed'})
+        return jsonify({'error': 'Not found'}), 404
     except Exception as e:
-        db.session.rollback()
         return jsonify({'error': str(e)}), 400
 
 @bp.route('/progress', methods=['POST'])
@@ -92,23 +95,23 @@ def update_progress():
     data = request.json
     try:
         participant_id = data['participant_id']
-        date_obj = datetime.strptime(data['date'], '%Y-%m-%d').date()
+        date_str = data['date'] # assumes front sends YYYY-MM-DD string already
         completed = data['completed']
 
-        progress = DailyEventProgress.query.filter_by(participant_id=participant_id, event_date=date_obj).first()
+        all_prog = ExcelDB.get_all('daily_event_progress')
+        progress = next((p for p in all_prog if p.get('participant_id') == participant_id and p.get('event_date') == date_str), None)
         
         if progress:
-            progress.is_completed = completed
+            ExcelDB.update('daily_event_progress', progress['id'], {'is_completed': completed})
+            progress['is_completed'] = completed
+            return jsonify(progress)
         else:
-            progress = DailyEventProgress(
-                participant_id=participant_id, 
-                event_date=date_obj, 
-                is_completed=completed
-            )
-            db.session.add(progress)
-        
-        db.session.commit()
-        return jsonify(progress.to_dict())
+            new_prog = {
+                'participant_id': participant_id, 
+                'event_date': date_str, 
+                'is_completed': completed
+            }
+            inserted = ExcelDB.insert('daily_event_progress', new_prog)
+            return jsonify(inserted)
     except Exception as e:
-        db.session.rollback()
         return jsonify({'error': str(e)}), 400

@@ -1,7 +1,5 @@
 from flask import Blueprint, request, jsonify
-from app.extensions import db
-from app.models.account import Account
-from app.models.character import Character
+from app.excel_db import ExcelDB
 import csv
 import io
 
@@ -20,6 +18,9 @@ def upload_accounts_csv():
         stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
         csv_input = csv.reader(stream)
         
+        all_accounts = ExcelDB.get_all('accounts')
+        existing_emails = {a.get('email'): a for a in all_accounts}
+
         added_count = 0
         for row in csv_input:
             if not row: continue
@@ -29,15 +30,14 @@ def upload_accounts_csv():
             password = row[1].strip()
             pin = row[2].strip() if len(row) > 2 else None
 
-            if not Account.query.filter_by(email=email).first():
-                new_acc = Account(email=email, password=password, pin=pin)
-                db.session.add(new_acc)
+            if email not in existing_emails:
+                new_acc = {'email': email, 'password': password, 'pin': pin}
+                ExcelDB.insert('accounts', new_acc)
+                existing_emails[email] = new_acc # Add to tracking to prevent dups in same csv
                 added_count += 1
         
-        db.session.commit()
         return jsonify({'message': f'Successfully added {added_count} accounts.'})
     except Exception as e:
-        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 @bp.route('/api/upload/characters', methods=['POST'])
@@ -52,6 +52,9 @@ def upload_characters_csv():
         stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
         csv_input = csv.reader(stream)
         
+        all_accounts = ExcelDB.get_all('accounts')
+        account_email_map = {a.get('email'): a.get('id') for a in all_accounts}
+
         added_count = 0
         for row in csv_input:
             if not row: continue
@@ -64,22 +67,21 @@ def upload_characters_csv():
             class_name = row[3].strip()
             char_type = row[4].strip()
 
-            account = Account.query.filter_by(email=acc_email).first()
-            if account:
-                new_char = Character(
-                    account_id=account.id,
-                    name=char_name,
-                    level=level,
-                    class_name=class_name,
-                    char_type=char_type
-                )
-                db.session.add(new_char)
+            acc_id = account_email_map.get(acc_email)
+            if acc_id:
+                new_char = {
+                    'account_id': acc_id,
+                    'name': char_name,
+                    'level': level,
+                    'class_name': class_name,
+                    'char_type': char_type,
+                    'is_favorite': False
+                }
+                ExcelDB.insert('characters', new_char)
                 added_count += 1
         
-        db.session.commit()
         return jsonify({'message': f'Successfully added {added_count} characters.'})
     except Exception as e:
-        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 # Character CRUD
@@ -87,51 +89,60 @@ def upload_characters_csv():
 def create_character():
     data = request.json
     try:
-        new_char = Character(
-            account_id=data['account_id'],
-            name=data['name'],
-            level=data.get('level'),
-            class_name=data.get('class_name'),
-            char_type=data.get('char_type')
-        )
-        db.session.add(new_char)
-        db.session.commit()
-        return jsonify(new_char.to_dict()), 201
+        new_char = {
+            'account_id': data['account_id'],
+            'name': data['name'],
+            'level': data.get('level'),
+            'class_name': data.get('class_name'),
+            'char_type': data.get('char_type'),
+            'is_favorite': data.get('is_favorite', False)
+        }
+        inserted = ExcelDB.insert('characters', new_char)
+        return jsonify(inserted), 201
     except Exception as e:
-        db.session.rollback()
         return jsonify({'error': str(e)}), 400
 
 @bp.route('/api/characters', methods=['GET'])
 def get_characters():
-    chars = Character.query.all()
-    # Sort by account logic or anything is done in frontend usually, but here we just dump
-    return jsonify([c.to_dict() for c in chars])
+    try:
+        chars = ExcelDB.get_all('characters')
+        return jsonify(chars)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @bp.route('/api/characters/<int:id>', methods=['PUT'])
 def update_character(id):
-    char = Character.query.get_or_404(id)
     data = request.json
-    char.name = data.get('name', char.name)
-    char.level = data.get('level', char.level)
-    char.class_name = data.get('class_name', char.class_name)
-    char.char_type = data.get('char_type', char.char_type)
-    if 'account_id' in data:
-        char.account_id = data['account_id']
-    
     try:
-        db.session.commit()
-        return jsonify(char.to_dict())
+        char = ExcelDB.get_by_id('characters', id)
+        if not char:
+            return jsonify({'error': 'Not found'}), 404
+        
+        update_data = {}
+        if 'name' in data: update_data['name'] = data['name']
+        if 'level' in data: update_data['level'] = data['level']
+        if 'class_name' in data: update_data['class_name'] = data['class_name']
+        if 'char_type' in data: update_data['char_type'] = data['char_type']
+        if 'is_favorite' in data: update_data['is_favorite'] = data['is_favorite']
+        if 'account_id' in data: update_data['account_id'] = data['account_id']
+        
+        updated = ExcelDB.update('characters', id, update_data)
+        return jsonify(updated)
     except Exception as e:
-        db.session.rollback()
         return jsonify({'error': str(e)}), 400
 
 @bp.route('/api/characters/<int:id>', methods=['DELETE'])
 def delete_character(id):
-    char = Character.query.get_or_404(id)
     try:
-        db.session.delete(char)
-        db.session.commit()
-        return jsonify({'message': 'Character deleted successfully'})
+        if ExcelDB.delete('characters', id):
+            return jsonify({'message': 'Character deleted successfully'})
+        return jsonify({'error': 'Not found'}), 404
     except Exception as e:
-        db.session.rollback()
         return jsonify({'error': str(e)}), 400
+@bp.route('/api/catalog/classes', methods=['GET'])
+def get_classes_catalogo():
+    try:
+        classes = ExcelDB.get_catalog('Catalogo', 'Clases')
+        return jsonify(classes)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

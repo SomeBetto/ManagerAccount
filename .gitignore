@@ -19,10 +19,7 @@ venv.bak/
 *.swp
 .DS_Store
 
-# Docker
-docker-compose.override.yml
-
-# Flask
+# OS generated files
 instance/
 .webassets-cache
 
@@ -35,3 +32,15 @@ yarn-error.log
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+# Local Config & Databases
+backend/config.json
+*.xlsx
+*.csv
+*.log
+
+# Python Virtual Environments
+venv/
+.venv/
+env/
+__pycache__/

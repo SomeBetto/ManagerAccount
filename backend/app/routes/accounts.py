@@ -1,6 +1,5 @@
 from flask import Blueprint, request, jsonify
-from app.extensions import db
-from app.models.account import Account
+from app.excel_db import ExcelDB
 
 bp = Blueprint('accounts', __name__, url_prefix='/api/accounts')
 
@@ -8,47 +7,51 @@ bp = Blueprint('accounts', __name__, url_prefix='/api/accounts')
 def create_account():
     data = request.json
     try:
-        new_account = Account(
-            email=data['email'],
-            password=data['password'],
-            pin=data.get('pin')
-        )
-        db.session.add(new_account)
-        db.session.commit()
-        return jsonify(new_account.to_dict()), 201
+        new_account = {
+            'email': data['email'],
+            'password': data['password'],
+            'pin': data.get('pin')
+        }
+        inserted = ExcelDB.insert('accounts', new_account)
+        return jsonify(inserted), 201
     except Exception as e:
-        db.session.rollback()
         return jsonify({'error': str(e)}), 400
 
 @bp.route('', methods=['GET'])
 def get_accounts():
-    accounts = Account.query.all()
-    return jsonify([a.to_dict() for a in accounts])
+    try:
+        accounts = ExcelDB.get_all('accounts')
+        return jsonify(accounts)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
 @bp.route('/<int:id>', methods=['PUT'])
 def update_account(id):
-    account = Account.query.get_or_404(id)
     data = request.json
-    account.email = data.get('email', account.email)
-    if data.get('password'):
-        account.password = data['password']
-    account.pin = data.get('pin', account.pin)
     try:
-        db.session.commit()
-        return jsonify(account.to_dict())
+        account = ExcelDB.get_by_id('accounts', id)
+        if not account:
+            return jsonify({'error': 'Not found'}), 404
+            
+        update_data = {}
+        if 'email' in data: update_data['email'] = data['email']
+        if 'password' in data: update_data['password'] = data['password']
+        if 'pin' in data: update_data['pin'] = data['pin']
+        
+        updated = ExcelDB.update('accounts', id, update_data)
+        return jsonify(updated)
     except Exception as e:
-        db.session.rollback()
         return jsonify({'error': str(e)}), 400
 
 @bp.route('/<int:id>', methods=['DELETE'])
 def delete_account(id):
-    account = Account.query.get_or_404(id)
     try:
-        db.session.delete(account)
-        db.session.commit()
-        return jsonify({'message': 'Account deleted successfully'})
+        success = ExcelDB.delete('accounts', id)
+        if success:
+            # Optionally cascade delete related characters? Let's keep it simple for now as per old logic.
+            return jsonify({'message': 'Account deleted successfully'})
+        return jsonify({'error': 'Not found'}), 404
     except Exception as e:
-        db.session.rollback()
         return jsonify({'error': str(e)}), 400
 
 @bp.route('/batch-delete', methods=['POST'])
@@ -58,9 +61,10 @@ def batch_delete_accounts():
     if not ids:
         return jsonify({'error': 'No IDs provided'}), 400
     try:
-        Account.query.filter(Account.id.in_(ids)).delete(synchronize_session=False)
-        db.session.commit()
-        return jsonify({'message': f'Deleted {len(ids)} accounts'})
+        count = 0
+        for i in ids:
+            if ExcelDB.delete('accounts', int(i)):
+                count += 1
+        return jsonify({'message': f'Deleted {count} accounts'})
     except Exception as e:
-        db.session.rollback()
         return jsonify({'error': str(e)}), 400

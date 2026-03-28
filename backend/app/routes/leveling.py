@@ -1,56 +1,58 @@
 from flask import Blueprint, request, jsonify
-from app.extensions import db
-from app.models.character import LevelEntry
+from app.excel_db import ExcelDB
 
 bp = Blueprint('leveling', __name__, url_prefix='/api/leveling')
 
 @bp.route('', methods=['GET'])
 def get_level_queue():
-    entries = LevelEntry.query.order_by(LevelEntry.priority.asc()).all()
-    return jsonify([e.to_dict() for e in entries])
+    try:
+        entries = ExcelDB.get_all('level_entries')
+        # sort by priority
+        entries.sort(key=lambda x: int(x.get('priority', 0)))
+        return jsonify(entries)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
 @bp.route('', methods=['POST'])
 def add_to_queue():
     data = request.json
     try:
-        # Check if already exists
-        if LevelEntry.query.filter_by(character_id=data['character_id']).first():
+        entries = ExcelDB.get_all('level_entries')
+        if any(e.get('character_id') == data['character_id'] for e in entries):
             return jsonify({'error': 'Character already in queue'}), 400
-
-        entry = LevelEntry(
-            character_id=data['character_id'],
-            priority=data.get('priority', 0),
-            note=data.get('note', '')
-        )
-        db.session.add(entry)
-        db.session.commit()
-        return jsonify(entry.to_dict()), 201
+            
+        new_entry = {
+            'character_id': data['character_id'],
+            'priority': data.get('priority', 0),
+            'note': data.get('note', '')
+        }
+        inserted = ExcelDB.insert('level_entries', new_entry)
+        return jsonify(inserted), 201
     except Exception as e:
-        db.session.rollback()
         return jsonify({'error': str(e)}), 400
 
 @bp.route('/<int:id>', methods=['PUT'])
 def update_queue_entry(id):
-    entry = LevelEntry.query.get_or_404(id)
     data = request.json
-    if 'priority' in data:
-        entry.priority = data['priority']
-    if 'note' in data:
-        entry.note = data['note']
     try:
-        db.session.commit()
-        return jsonify(entry.to_dict())
+        entry = ExcelDB.get_by_id('level_entries', id)
+        if not entry:
+            return jsonify({'error': 'Not found'}), 404
+            
+        update_data = {}
+        if 'priority' in data: update_data['priority'] = data['priority']
+        if 'note' in data: update_data['note'] = data['note']
+        
+        updated = ExcelDB.update('level_entries', id, update_data)
+        return jsonify(updated)
     except Exception as e:
-        db.session.rollback()
         return jsonify({'error': str(e)}), 400
 
 @bp.route('/<int:id>', methods=['DELETE'])
 def remove_from_queue(id):
-    entry = LevelEntry.query.get_or_404(id)
     try:
-        db.session.delete(entry)
-        db.session.commit()
-        return jsonify({'message': 'Removed from queue'})
+        if ExcelDB.delete('level_entries', id):
+            return jsonify({'message': 'Removed from queue'})
+        return jsonify({'error': 'Not found'}), 404
     except Exception as e:
-        db.session.rollback()
         return jsonify({'error': str(e)}), 400
