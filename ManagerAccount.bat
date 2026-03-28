@@ -12,12 +12,12 @@ echo.
 
 :: 1. Verificar si existe Git para buscar actualizaciones
 where git >nul 2>&1
-if %errorLevel% eq 0 (
-    echo [*] Verificando actualizaciones en Git (master)...
-    git fetch origin master >nul 2>&1
+if %errorLevel% EQU 0 (
+    echo [*] Verificando actualizaciones en Git ^(main^)...
+    git fetch origin main >nul 2>&1
     
     for /f %%i in ('git rev-parse HEAD') do set local=%%i
-    for /f %%i in ('git rev-parse origin/master') do set remote=%%i
+    for /f %%i in ('git rev-parse origin/main') do set remote=%%i
     
     if not "!local!"=="!remote!" (
         echo.
@@ -25,7 +25,7 @@ if %errorLevel% eq 0 (
         set /p update="¿Deseas descargar la ultima version ahora? (S/N): "
         if /i "!update!"=="S" (
             echo [*] Actualizando a la ultima version...
-            git pull origin master
+            git pull origin main
             echo [OK] Actualizacion finalizada.
         )
     ) else (
