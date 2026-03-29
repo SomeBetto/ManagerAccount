@@ -7,7 +7,7 @@ CONFIG_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.j
 SCHEMA = {
     'accounts': ['id', 'email', 'password', 'pin'],
     'characters': ['id', 'account_id', 'name', 'password', 'level', 'class_name', 'char_type', 'is_favorite'],
-    'items': ['id', 'character_id', 'name', 'description'],
+    'items': ['id', 'character_id', 'name', 'item_type', 'description'],
     'level_entries': ['id', 'character_id', 'priority', 'note'],
     'daily_events': ['id', 'name', 'description', 'start_date', 'end_date'],
     'daily_event_participants': ['id', 'event_id', 'character_id'],
@@ -28,6 +28,7 @@ HEADER_ALIASES = {
     'char_type': ['char_type', 'tipo', 'type', 'rol', 'role', 'categoria'],
     'is_favorite': ['is_favorite', 'favorito', 'fav', 'estrella', 'destacado'],
     'description': ['description', 'descripcion', 'desc', 'detalle', 'notas'],
+    'item_type': ['item_type', 'tipo_item', 'tipo item', 'tipo', 'categoria'],
     'character_id': ['character_id', 'id_personaje', 'char_id', 'pj_id'],
     'priority': ['priority', 'prioridad', 'orden', 'rango'],
     'note': ['note', 'nota', 'notas', 'observacion', 'obs'],

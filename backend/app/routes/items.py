@@ -19,6 +19,7 @@ def create_item():
         new_item = {
             'character_id': data['character_id'],
             'name': data['name'],
+            'item_type': data.get('item_type', ''),
             'description': desc
         }
         inserted = ExcelDB.insert('items', new_item)
@@ -35,6 +36,7 @@ def update_item(id):
         
         update_data = {}
         if 'name' in data: update_data['name'] = data['name']
+        if 'item_type' in data: update_data['item_type'] = data['item_type']
         if 'description' in data: update_data['description'] = data.get('description', '')[:50]
         if 'character_id' in data: update_data['character_id'] = data['character_id']
         

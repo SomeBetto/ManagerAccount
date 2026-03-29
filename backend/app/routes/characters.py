@@ -146,3 +146,14 @@ def get_classes_catalogo():
         return jsonify(classes)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@bp.route('/api/catalog/item_types', methods=['GET'])
+def get_item_types_catalogo():
+    try:
+        types = ExcelDB.get_catalog('Catalogo', 'TipoItems')
+        if not types:
+            # Fallback defaults if the column is missing or empty in Excel
+            types = ['Arma', 'Armadura', 'Joya', 'Consumible', 'Material', 'Quest', 'Evento', 'Otro']
+        return jsonify(types)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

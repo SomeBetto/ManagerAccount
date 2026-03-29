@@ -127,6 +127,9 @@
             <div id="items-view" class="view-section">
                 <header style="margin-bottom:1rem; display:flex; justify-content:space-between; align-items:center;">
                     <h2>Important Items</h2>
+                    <button class="btn-primary" onclick="openModal('item')">
+                        <i class="fa-solid fa-plus"></i> New Item
+                    </button>
                 </header>
                 <div class="card-grid" id="items-grid">
                     <!-- Items interpolated here -->
@@ -425,6 +428,16 @@
             <h2 id="redeemed-modal-title" style="margin-bottom:1.5rem;">Redeemed By</h2>
             <div id="redeemed-chars-grid" class="grid">
                 <!-- Redeemed character cards -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Character Info Modal -->
+    <div id="char-info-modal" class="modal">
+        <div class="modal-content glass-panel" style="max-width:400px; z-index: 1005;">
+            <span class="close" onclick="closeCharInfoModal()">&times;</span>
+            <h2 id="ci-name">Character Info</h2>
+            <div style="display:flex; gap:10px; margin-top:20px; flex-wrap:wrap;" id="ci-actions">
             </div>
         </div>
     </div>

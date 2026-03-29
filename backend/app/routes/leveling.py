@@ -7,6 +7,39 @@ bp = Blueprint('leveling', __name__, url_prefix='/api/leveling')
 def get_level_queue():
     try:
         entries = ExcelDB.get_all('level_entries')
+        characters = ExcelDB.get_all('characters')
+        accounts = ExcelDB.get_all('accounts')
+        
+        # Create lookups for faster access
+        char_map = {c['id']: c for c in characters}
+        acc_map = {a['id']: a for a in accounts}
+        
+        for e in entries:
+            try:
+                char_id = int(e.get('character_id')) if e.get('character_id') is not None else None
+            except (ValueError, TypeError):
+                char_id = e.get('character_id')
+                
+            e['character_id'] = char_id # Ensure it's there and int-ish
+            char = char_map.get(char_id)
+            if char:
+                e['character_name'] = char.get('name', 'Unknown')
+                try:
+                    acc_id = int(char.get('account_id')) if char.get('account_id') is not None else None
+                except (ValueError, TypeError):
+                    acc_id = char.get('account_id')
+                
+                e['account_id'] = acc_id
+                acc = acc_map.get(acc_id)
+                if acc:
+                    e['account_email'] = acc.get('email', 'Unknown')
+                else:
+                    e['account_email'] = 'Unknown'
+            else:
+                e['character_name'] = 'Unknown'
+                e['account_email'] = 'Unknown'
+                e['account_id'] = None
+
         # sort by priority
         entries.sort(key=lambda x: int(x.get('priority', 0)))
         return jsonify(entries)

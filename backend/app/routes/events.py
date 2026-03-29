@@ -58,7 +58,29 @@ def delete_daily_event(id):
 def get_event_participants(id):
     try:
         parts = ExcelDB.get_all('daily_event_participants')
-        filtered = [p for p in parts if p.get('event_id') == id]
+        chars = ExcelDB.get_all('characters')
+        accs = ExcelDB.get_all('accounts')
+        progs = ExcelDB.get_all('daily_event_progress')
+
+        char_map = {c['id']: c for c in chars}
+        acc_map = {a['id']: a for a in accs}
+        
+        filtered = []
+        for p in parts:
+            if p.get('event_id') == id:
+                char = char_map.get(p.get('character_id'))
+                if char:
+                    p['character_name'] = char.get('name')
+                    p['character_class'] = char.get('class_name')
+                    p['account_id'] = char.get('account_id')
+                    acc = acc_map.get(p['account_id'])
+                    if acc:
+                        p['account_email'] = acc.get('email')
+                
+                # Attach progress for this event context
+                p['progress'] = [pr for pr in progs if pr.get('participant_id') == p.get('id')]
+                filtered.append(p)
+                
         return jsonify(filtered)
     except Exception as e:
         return jsonify({'error': str(e)}), 400

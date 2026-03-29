@@ -431,7 +431,11 @@ function renderItems() {
     const grid = document.getElementById('items-grid');
     if (!grid) return;
 
-    grid.innerHTML = items.map(item => `
+    grid.innerHTML = items.map(item => {
+        const char = characters.find(c => c.id === parseInt(item.character_id));
+        const charName = char ? char.name : 'Unknown';
+        
+        return `
         <div class="card">
             <div class="card-bar" style="display:flex; justify-content:flex-end; padding-bottom:0.8rem; margin-bottom:0.8rem; border-bottom:1px solid rgba(255,255,255,0.05);">
                 <div class="card-actions" style="opacity:1;">
@@ -443,14 +447,21 @@ function renderItems() {
                 <div class="card-title" style="word-break:break-all;">${item.name}</div>
             </div>
             <div class="card-content">
-                <p>${i18n('field_owner')} <span class="value" style="color:var(--primary); font-weight:600;">${item.character_name}</span></p>
-                <p>${i18n('field_account')} <span class="value" style="opacity:0.8; font-size:0.85rem;">${item.account_email}</span></p>
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                    <span style="opacity:0.6; font-size:0.8rem;">Type</span>
+                    <span class="badge" style="background:var(--primary); color:white;">${item.item_type || 'Misc'}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="opacity:0.6; font-size:0.8rem;">${i18n('field_owner')}</span>
+                    <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="openCharInfoModal(${item.character_id})"><i class="fa-solid fa-user"></i> ${charName}</button>
+                </div>
                 <div style="margin-top:10px; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
                     <p style="margin:0; font-size:0.9rem; font-style:italic; opacity:0.9;">${item.description || i18n('field_desc_empty')}</p>
                 </div>
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 function renderAccounts() {
@@ -476,25 +487,15 @@ function renderAccounts() {
             <div class="card-header" style="padding-top:0; margin-bottom:0.5rem;">
                 <div class="card-title" style="word-break:break-all;">
                     ${acc.email}
-                    <i class="fa-solid fa-copy" style="cursor:pointer; font-size:0.8rem; margin-left:8px;" onclick="copyAccountEmail(${acc.id})" title="${i18n('action_copy_email')}"></i>
                 </div>
             </div>
             <div class="card-content">
                 <p>${i18n('field_id')} <span class="value">#${acc.id}</span></p>
-                <p>${i18n('field_pin')} 
-                    <span class="value" style="display:flex; align-items:center; gap:5px;">
-                        <span id="acc-pin-${acc.id}">****</span>
-                        <i class="fa-solid fa-eye" style="cursor:pointer; font-size:0.8rem;" onclick="togglePin(${acc.id})" title="${i18n('action_toggle_pin')}"></i>
-                        <i class="fa-solid fa-copy" style="cursor:pointer; font-size:0.8rem;" onclick="copyAccountPin(${acc.id})" title="${i18n('action_copy_pin')}"></i>
-                    </span>
-                </p>
-                <p>${i18n('field_pass')} 
-                    <span class="value" style="display:flex; align-items:center; gap:5px;">
-                        <span id="acc-pass-${acc.id}">••••••••</span>
-                        <i class="fa-solid fa-eye" style="cursor:pointer; font-size:0.8rem;" onclick="togglePass(${acc.id})" title="${i18n('action_toggle_pass')}"></i>
-                        <i class="fa-solid fa-copy" style="cursor:pointer; font-size:0.8rem;" onclick="copyAccountPass(${acc.id})" title="${i18n('action_copy_pass')}"></i>
-                    </span>
-                </p>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:15px;">
+                    <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountEmail(${acc.id})" title="${i18n('action_copy_email')}"><i class="fa-solid fa-envelope"></i> Email</button>
+                    <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountPassword(${acc.id})" title="${i18n('action_copy_pass')}"><i class="fa-solid fa-key"></i> Pass</button>
+                    <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountPin(${acc.id})" title="${i18n('action_copy_pin')}"><i class="fa-solid fa-lock"></i> PIN</button>
+                </div>
             </div>
         </div>
     `}).join('');
@@ -775,21 +776,15 @@ function renderCharactersHTML(list, targetGridId = 'characters-grid') {
                         <div class="card-title" style="word-break:break-all;">${char.name || 'Unnamed'}</div>
                     </div>
                     <div class="card-content">
-                        <p>${i18n('field_account')} 
-                            <span class="value" style="display:flex; align-items:center; gap:5px;">
-                                ${getAccountEmail(char.account_id)}
-                                <i class="fa-solid fa-copy" style="cursor:pointer; font-size:0.8rem;" onclick="copyToClipboard('${getAccountEmail(char.account_id)}')" title="${i18n('action_copy_email')}"></i>
-                            </span>
-                        </p>
-                        <p>${i18n('field_pass')} 
-                            <span class="value" style="display:flex; align-items:center; gap:5px;">
-                                ****** 
-                                <i class="fa-solid fa-copy" style="cursor:pointer; font-size:0.8rem;" onclick="copyCharacterPassword(${char.id})" title="${i18n('action_copy_pass')}"></i>
-                            </span>
-                        </p>
                         <p>${i18n('field_level')} <span class="value">${char.level || 0}</span></p>
                         <p>${i18n('field_class')} <span class="value">${char.class_name || 'None'}</span></p>
                         <p>${i18n('settings_char_types')} <span class="badge badge-${charTypeLower}">${charType}</span></p>
+
+                        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:15px;">
+                            <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyToClipboard('${getAccountEmail(char.account_id)}')" title="${i18n('action_copy_email')}"><i class="fa-solid fa-envelope"></i> Email</button>
+                            <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyCharacterPassword(${char.id})" title="${i18n('action_copy_pass')}"><i class="fa-solid fa-key"></i> Pass</button>
+                            <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountPin(${char.account_id})" title="${i18n('action_copy_pin')}"><i class="fa-solid fa-lock"></i> PIN</button>
+                        </div>
                     </div>
                 </div>
             `;
@@ -841,9 +836,9 @@ function openVacanteModal(accountId) {
     
     document.getElementById('vd-title').innerText = acc.email;
     document.getElementById('vd-credentials').innerHTML = `
-        <span style="font-size:0.9rem; cursor:pointer; padding:5px 10px; background:rgba(255,255,255,0.05); border-radius:5px; transition: background 0.2s;" onclick="copyAccountEmail(${acc.id})" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'"><i class="fa-solid fa-envelope"></i> ${i18n('field_account')}</span>
-        <span style="font-size:0.9rem; cursor:pointer; padding:5px 10px; background:rgba(255,255,255,0.05); border-radius:5px; transition: background 0.2s;" onclick="copyAccountPassword(${acc.id})" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'"><i class="fa-solid fa-key"></i> ${i18n('field_pass')}</span>
-        <span style="font-size:0.9rem; cursor:pointer; padding:5px 10px; background:rgba(255,255,255,0.05); border-radius:5px; transition: background 0.2s;" onclick="copyAccountPin(${acc.id})" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'"><i class="fa-solid fa-lock"></i> ${i18n('field_pin')}</span>
+        <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountEmail(${acc.id})"><i class="fa-solid fa-envelope"></i> Email</button>
+        <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountPassword(${acc.id})"><i class="fa-solid fa-key"></i> Pass</button>
+        <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountPin(${acc.id})"><i class="fa-solid fa-lock"></i> PIN</button>
     `;
     document.getElementById('vd-count').innerText = accChars.length;
     
@@ -965,6 +960,17 @@ async function openModal(type = null, id = null) {
         const data = id ? items.find(i => i.id === id) : {};
         const characterOptions = characters.map(c => `<option value="${c.id}" ${data.character_id === c.id ? 'selected' : ''}>${c.name}</option>`).join('');
 
+        let typeOptions = '<option value="">Select Type</option>';
+        try {
+            const res = await fetch(`${API_URL}/catalog/item_types`);
+            if (res.ok) {
+                const types = await res.json();
+                typeOptions += types.map(t => `<option value="${t}" ${data.item_type === t ? 'selected' : ''}>${t}</option>`).join('');
+            }
+        } catch (e) {
+            console.error("Error fetching item types catalog:", e);
+        }
+
         html = `
             <div class="form-group">
                 <label>Assign to Character</label>
@@ -975,6 +981,12 @@ async function openModal(type = null, id = null) {
             <div class="form-group">
                 <label>Item Name</label>
                 <input type="text" name="name" value="${data.name || ''}" required>
+            </div>
+            <div class="form-group">
+                <label>Item Type</label>
+                <select name="item_type" required>
+                    ${typeOptions}
+                </select>
             </div>
             <div class="form-group">
                 <label>${i18n('field_desc')} (Max 50 chars)</label>
@@ -1041,6 +1053,26 @@ async function deleteItem(type, id) {
         else if (type === 'items') fetchItems();
         else fetchCharacters();
     } catch (e) { console.error(e); }
+}
+
+function openCharInfoModal(charId) {
+    if (!charId) return;
+    const char = characters.find(c => c.id === parseInt(charId));
+    if (!char) return;
+    const acc = accounts.find(a => a.id === char.account_id);
+    if (!acc) return;
+
+    document.getElementById('ci-name').innerText = char.name;
+    document.getElementById('ci-actions').innerHTML = `
+        <button class="btn-secondary" onclick="copyAccountEmail(${acc.id})"><i class="fa-solid fa-envelope"></i> Email</button>
+        <button class="btn-secondary" onclick="copyAccountPassword(${acc.id})"><i class="fa-solid fa-key"></i> Pass</button>
+        <button class="btn-secondary" onclick="copyAccountPin(${acc.id})"><i class="fa-solid fa-lock"></i> PIN</button>
+    `;
+    document.getElementById('char-info-modal').classList.add('show');
+}
+
+function closeCharInfoModal() {
+    document.getElementById('char-info-modal').classList.remove('show');
 }
 
 function capitalize(s) {
@@ -1255,7 +1287,11 @@ function renderLevelQueue() {
                 <div class="card-title">${entry.character_name}</div>
             </div>
             <div class="card-content">
-                <p>${i18n('field_account')} <span class="value">${entry.account_email}</span></p>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+                    <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountEmail(${entry.account_id})"><i class="fa-solid fa-envelope"></i> Email</button>
+                    <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountPassword(${entry.account_id})"><i class="fa-solid fa-key"></i> Pass</button>
+                    <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountPin(${entry.account_id})"><i class="fa-solid fa-lock"></i> PIN</button>
+                </div>
                 <div style="margin-top:10px;">
                     <label style="font-size:0.8rem; color:rgba(255,255,255,0.5);">Priority</label>
                     <input type="number" value="${entry.priority}" onchange="updateLevelEntry(${entry.id}, 'priority', this.value)" style="width:100%; padding:5px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); color:white; border-radius:4px;">
@@ -1511,9 +1547,10 @@ function renderEventParticipants(participants, eventId) {
                 <button class="icon-btn" onclick="removeParticipant(${p.id})" style="color:#ef4444; width:25px; height:25px; min-height:0;"><i class="fa-solid fa-trash"></i></button>
             </div>
             
-            <div style="display:flex; gap:10px; margin-bottom:1rem;">
-                <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyToClipboard('${p.account_email}')"><i class="fa-solid fa-envelope"></i> Email</button>
-                <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyCharacterPassword(${p.character_id})"><i class="fa-solid fa-key"></i> Pass</button>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:1rem;">
+                <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountEmail(${p.account_id})"><i class="fa-solid fa-envelope"></i> Email</button>
+                <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountPassword(${p.account_id})"><i class="fa-solid fa-key"></i> Pass</button>
+                <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountPin(${p.account_id})"><i class="fa-solid fa-lock"></i> PIN</button>
             </div>
 
             <div style="display:flex; flex-wrap:wrap; gap:5px;">
