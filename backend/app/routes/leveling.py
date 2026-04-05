@@ -44,6 +44,8 @@ def get_level_queue():
         entries.sort(key=lambda x: int(x.get('priority', 0)))
         return jsonify(entries)
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 400
 
 @bp.route('', methods=['POST'])
@@ -62,6 +64,8 @@ def add_to_queue():
         inserted = ExcelDB.insert('level_entries', new_entry)
         return jsonify(inserted), 201
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 400
 
 @bp.route('/<int:id>', methods=['PUT'])
@@ -79,6 +83,8 @@ def update_queue_entry(id):
         updated = ExcelDB.update('level_entries', id, update_data)
         return jsonify(updated)
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 400
 
 @bp.route('/<int:id>', methods=['DELETE'])
@@ -88,4 +94,6 @@ def remove_from_queue(id):
             return jsonify({'message': 'Removed from queue'})
         return jsonify({'error': 'Not found'}), 404
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 400

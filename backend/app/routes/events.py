@@ -9,6 +9,8 @@ def get_daily_events():
         events = ExcelDB.get_all('daily_events')
         return jsonify(events)
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 400
 
 @bp.route('', methods=['POST'])
@@ -24,6 +26,8 @@ def create_daily_event():
         inserted = ExcelDB.insert('daily_events', new_event)
         return jsonify(inserted), 201
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 400
 
 @bp.route('/<int:id>', methods=['PUT'])
@@ -42,6 +46,8 @@ def update_daily_event(id):
         updated = ExcelDB.update('daily_events', id, update_data)
         return jsonify(updated)
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 400
 
 @bp.route('/<int:id>', methods=['DELETE'])
@@ -51,6 +57,8 @@ def delete_daily_event(id):
             return jsonify({'message': 'Event deleted'})
         return jsonify({'error': 'Not found'}), 404
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 400
 
 # Parts & Progress
@@ -83,6 +91,8 @@ def get_event_participants(id):
                 
         return jsonify(filtered)
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 400
 
 @bp.route('/<int:id>/participants', methods=['POST'])
@@ -101,6 +111,8 @@ def add_participant(id):
         inserted = ExcelDB.insert('daily_event_participants', new_part)
         return jsonify(inserted), 201
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 400
 
 @bp.route('/participants/<int:id>', methods=['DELETE'])
@@ -110,6 +122,8 @@ def remove_participant(id):
             return jsonify({'message': 'Participant removed'})
         return jsonify({'error': 'Not found'}), 404
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 400
 
 @bp.route('/progress', methods=['POST'])
@@ -136,4 +150,6 @@ def update_progress():
             inserted = ExcelDB.insert('daily_event_progress', new_prog)
             return jsonify(inserted)
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 400

@@ -10,6 +10,8 @@ def get_coupons():
         coupons = ExcelDB.get_all('coupons')
         return jsonify(coupons)
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @bp.route('/api/coupons', methods=['POST'])
@@ -22,6 +24,8 @@ def create_coupon():
         new_coupon = ExcelDB.insert('coupons', data)
         return jsonify(new_coupon), 201
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @bp.route('/api/coupons/<int:coupon_id>', methods=['DELETE'])
@@ -30,6 +34,8 @@ def delete_coupon(coupon_id):
         success = ExcelDB.delete('coupons', coupon_id)
         return jsonify({'success': success})
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 def safe_int(val):
@@ -57,6 +63,8 @@ def get_unredeemed_accounts(coupon_id):
         unredeemed = [a for a in all_accounts if safe_int(a.get('id')) not in redeemed_account_ids]
         return jsonify(unredeemed)
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @bp.route('/api/coupons/redeem', methods=['POST'])
@@ -79,6 +87,8 @@ def redeem_coupon():
         new_redemption = ExcelDB.insert('coupon_redemptions', data)
         return jsonify(new_redemption), 201
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @bp.route('/api/coupons/skip', methods=['POST'])
@@ -104,6 +114,8 @@ def skip_coupon():
         new_redemption = ExcelDB.insert('coupon_redemptions', data)
         return jsonify(new_redemption), 201
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @bp.route('/api/coupons/<int:coupon_id>/redeemed', methods=['GET'])
@@ -128,4 +140,6 @@ def get_redeemed_characters(coupon_id):
                 
         return jsonify(redeemed_chars)
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 500

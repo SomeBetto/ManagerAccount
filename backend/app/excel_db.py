@@ -97,9 +97,7 @@ class ExcelDB:
         # If file doesn't exist, we could theoretically create it, but the instruction implies picking an existing one.
         if not os.path.exists(path):
             wb = openpyxl.Workbook()
-            # Remove default sheet
-            if 'Sheet' in wb.sheetnames:
-                del wb['Sheet']
+            # Do not remove default sheet here to prevent "At least one sheet must be visible" error from openpyxl
             # Save it so we can load it
             cls._save_workbook(wb, path)
         
@@ -127,6 +125,11 @@ class ExcelDB:
                             ws.cell(row=1, column=next_col, value=col_name.capitalize())
                             next_col += 1
                             changed = True
+
+        # Remove the default sheet only after we have created at least one actual data sheet
+        if 'Sheet' in wb.sheetnames and len(wb.sheetnames) > 1:
+            del wb['Sheet']
+            changed = True
 
         if changed:
             cls._save_workbook(wb, path)

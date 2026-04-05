@@ -20,6 +20,8 @@ def update_db_path():
         ExcelDB.init_db()
         return jsonify({'message': 'Ruta configurada y base de datos inicializada.'}), 200
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 400
 
 @bp.route('/browse', methods=['GET'])
@@ -48,6 +50,10 @@ def browse_db_path():
             return jsonify({'error': 'No se seleccionó ningún archivo'}), 400
             
     except Exception as e:
+            
+        from flask import current_app
+            
+        current_app.logger.error(str(e), exc_info=True)
         print(f"Error abriendo explorador de archivos: {e}")
         return jsonify({'error': 'La ventana de carpetas no es compatible con entornos Docker o Linux Headless. Por favor escribe la ruta manualmente.'}), 400
 
@@ -76,5 +82,9 @@ def browse_new_db_path():
             return jsonify({'error': 'Cancelado por el usuario'}), 400
             
     except Exception as e:
+            
+        from flask import current_app
+            
+        current_app.logger.error(str(e), exc_info=True)
         print(f"Error abriendo explorador de archivos: {e}")
         return jsonify({'error': 'Error al abrir el explorador para crear archivo.'}), 400

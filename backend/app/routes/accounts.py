@@ -15,6 +15,8 @@ def create_account():
         inserted = ExcelDB.insert('accounts', new_account)
         return jsonify(inserted), 201
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 400
 
 @bp.route('', methods=['GET'])
@@ -23,6 +25,8 @@ def get_accounts():
         accounts = ExcelDB.get_all('accounts')
         return jsonify(accounts)
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 400
 
 @bp.route('/<int:id>', methods=['PUT'])
@@ -41,6 +45,8 @@ def update_account(id):
         updated = ExcelDB.update('accounts', id, update_data)
         return jsonify(updated)
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 400
 
 @bp.route('/<int:id>', methods=['DELETE'])
@@ -52,6 +58,8 @@ def delete_account(id):
             return jsonify({'message': 'Account deleted successfully'})
         return jsonify({'error': 'Not found'}), 404
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 400
 
 @bp.route('/batch-delete', methods=['POST'])
@@ -67,4 +75,6 @@ def batch_delete_accounts():
                 count += 1
         return jsonify({'message': f'Deleted {count} accounts'})
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 400

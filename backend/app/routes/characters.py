@@ -38,6 +38,8 @@ def upload_accounts_csv():
         
         return jsonify({'message': f'Successfully added {added_count} accounts.'})
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @bp.route('/api/upload/characters', methods=['POST'])
@@ -82,6 +84,8 @@ def upload_characters_csv():
         
         return jsonify({'message': f'Successfully added {added_count} characters.'})
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 # Character CRUD
@@ -100,6 +104,8 @@ def create_character():
         inserted = ExcelDB.insert('characters', new_char)
         return jsonify(inserted), 201
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 400
 
 @bp.route('/api/characters', methods=['GET'])
@@ -108,6 +114,8 @@ def get_characters():
         chars = ExcelDB.get_all('characters')
         return jsonify(chars)
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @bp.route('/api/characters/<int:id>', methods=['PUT'])
@@ -129,6 +137,8 @@ def update_character(id):
         updated = ExcelDB.update('characters', id, update_data)
         return jsonify(updated)
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 400
 
 @bp.route('/api/characters/<int:id>', methods=['DELETE'])
@@ -138,6 +148,8 @@ def delete_character(id):
             return jsonify({'message': 'Character deleted successfully'})
         return jsonify({'error': 'Not found'}), 404
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 400
 @bp.route('/api/catalog/classes', methods=['GET'])
 def get_classes_catalogo():
@@ -145,6 +157,8 @@ def get_classes_catalogo():
         classes = ExcelDB.get_catalog('Catalogo', 'Clases')
         return jsonify(classes)
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @bp.route('/api/catalog/item_types', methods=['GET'])
@@ -156,4 +170,6 @@ def get_item_types_catalogo():
             types = ['Arma', 'Armadura', 'Joya', 'Consumible', 'Material', 'Quest', 'Evento', 'Otro']
         return jsonify(types)
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 500

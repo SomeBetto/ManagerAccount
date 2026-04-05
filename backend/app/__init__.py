@@ -44,4 +44,19 @@ def create_app(config_class=Config):
         except Exception as e:
              print(f"Excel DB Init Error: {e}")
 
+    # Configurar Logging
+    import logging
+    from logging.handlers import RotatingFileHandler
+    
+    log_dir = os.path.join(BASE_DIR, 'backend', 'log')
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+        
+    file_handler = RotatingFileHandler(os.path.join(log_dir, 'error.log'), maxBytes=102400, backupCount=10, encoding='utf-8')
+    file_handler.setFormatter(logging.Formatter(
+        '%(asctime)s - Archivo: %(filename)s - Método: %(funcName)s - Error: %(message)s'
+    ))
+    file_handler.setLevel(logging.ERROR)
+    app.logger.addHandler(file_handler)
+
     return app

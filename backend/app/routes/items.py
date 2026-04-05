@@ -9,6 +9,8 @@ def get_items():
         items = ExcelDB.get_all('items')
         return jsonify(items)
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 400
 
 @bp.route('/api/items', methods=['POST'])
@@ -25,6 +27,8 @@ def create_item():
         inserted = ExcelDB.insert('items', new_item)
         return jsonify(inserted), 201
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 400
 
 @bp.route('/api/items/<int:id>', methods=['PUT'])
@@ -43,6 +47,8 @@ def update_item(id):
         updated = ExcelDB.update('items', id, update_data)
         return jsonify(updated)
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 400
 
 @bp.route('/api/items/<int:id>', methods=['DELETE'])
@@ -52,4 +58,6 @@ def delete_item(id):
             return jsonify({'message': 'Item deleted successfully'})
         return jsonify({'error': 'Not found'}), 404
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 400

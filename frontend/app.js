@@ -402,28 +402,43 @@ function updateHeaderButtons(view) {
 async function fetchAccounts() {
     try {
         const res = await fetch(`${API_URL}/accounts`);
-        accounts = await res.json();
-        renderAccounts();
-        updateFilterOptions();
-        if (currentView === 'vacantes') renderVacantes();
-    } catch (e) { console.error(e); }
+        if (res.ok) {
+            accounts = await res.json();
+            renderAccounts();
+            updateFilterOptions();
+            if (currentView === 'vacantes') renderVacantes();
+        } else {
+            console.warn("Error fetching accounts:", await res.json());
+            accounts = [];
+        }
+    } catch (e) { console.error(e); accounts = []; }
 }
 
 async function fetchCharacters() {
     try {
         const res = await fetch(`${API_URL}/characters`);
-        characters = await res.json();
-        renderCharacters();
-        if (currentView === 'vacantes') renderVacantes();
-    } catch (e) { console.error(e); }
+        if (res.ok) {
+            characters = await res.json();
+            renderCharacters();
+            if (currentView === 'vacantes') renderVacantes();
+        } else {
+            console.warn("Error fetching characters:", await res.json());
+            characters = [];
+        }
+    } catch (e) { console.error(e); characters = []; }
 }
 
 async function fetchItems() {
     try {
         const res = await fetch(`${API_URL}/items`);
-        items = await res.json();
-        renderItems();
-    } catch (e) { console.error(e); }
+        if (res.ok) {
+            items = await res.json();
+            renderItems();
+        } else {
+            console.warn("Error fetching items:", await res.json());
+            items = [];
+        }
+    } catch (e) { console.error(e); items = []; }
 }
 
 // Rendering
@@ -1262,9 +1277,14 @@ let levelQueue = [];
 async function fetchLevelQueue() {
     try {
         const res = await fetch(`${API_URL}/leveling`);
-        levelQueue = await res.json();
-        renderLevelQueue();
-    } catch (e) { console.error(e); }
+        if (res.ok) {
+            levelQueue = await res.json();
+            renderLevelQueue();
+        } else {
+            console.warn("Error fetching level queue:", await res.json());
+            levelQueue = [];
+        }
+    } catch (e) { console.error(e); levelQueue = []; }
 }
 
 function renderLevelQueue() {
@@ -1385,12 +1405,12 @@ let currentEventId = null;
 
 function fetchDailyEvents() {
     fetch(`${API_URL}/daily-events`)
-        .then(res => res.json())
+        .then(res => res.ok ? res.json() : (console.warn("Error fetching daily events"), []))
         .then(data => {
             dailyEvents = data;
             renderDailyEvents();
         })
-        .catch(err => console.error(err));
+        .catch(err => { console.error(err); dailyEvents = []; });
 }
 
 function renderDailyEvents() {
@@ -1492,10 +1512,11 @@ function closeEventDetailsModal() {
 
 function fetchEventParticipants(eventId) {
     fetch(`${API_URL}/daily-events/${eventId}/participants`)
-        .then(res => res.json())
+        .then(res => res.ok ? res.json() : (console.warn("Error fetching event participants"), []))
         .then(data => {
             renderEventParticipants(data, eventId);
-        });
+        })
+        .catch(err => console.error(err));
 }
 
 function renderEventParticipants(participants, eventId) {
