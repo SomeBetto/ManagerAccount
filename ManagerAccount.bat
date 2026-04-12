@@ -22,12 +22,9 @@ if %errorLevel% EQU 0 (
     if not "!local!"=="!remote!" (
         echo.
         echo [!] ¡NUEVA VERSION DETECTADA EN GIT!
-        set /p update="¿Deseas descargar la ultima version ahora? (S/N): "
-        if /i "!update!"=="S" (
-            echo [*] Actualizando a la ultima version...
-            git pull origin main
-            echo [OK] Actualizacion finalizada.
-        )
+        echo [*] Actualizando automaticamente a la ultima version...
+        git pull origin main
+        echo [OK] Actualizacion finalizada.
     ) else (
         echo [OK] El sistema esta actualizado.
     )
