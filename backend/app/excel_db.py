@@ -57,6 +57,23 @@ def set_excel_path(path):
     with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=4)
 
+def get_config_key(key):
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            return data.get(key)
+    return None
+
+def set_config_keys(updates):
+    data = {}
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+    for k, v in updates.items():
+        data[k] = v
+    with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=4)
+
 class ExcelDB:
     @staticmethod
     def _get_workbook():
@@ -333,6 +350,16 @@ class ExcelDB:
         actual_name = cls._get_actual_sheetname(wb, table_name)
         if not actual_name:
             return None
+
+        # Relational Lookup (Account ID -> Email)
+        if table_name == 'characters' and 'account_id' in new_data:
+            try:
+                acc_id = int(new_data['account_id'])
+                acc = cls.get_by_id('accounts', acc_id)
+                if acc:
+                    new_data['email'] = acc.get('email')
+            except (ValueError, TypeError):
+                pass
         
         ws = wb[actual_name]
         rows = list(ws.iter_rows())

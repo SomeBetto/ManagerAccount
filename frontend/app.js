@@ -19,6 +19,8 @@ const translations = {
         sidebar_levelzone: "Leveling Zone",
         sidebar_dailyevent: "Daily Events",
         sidebar_coupons: "Coupons",
+        sidebar_contadores: "Counters",
+        page_title_contadores: "Counters",
         // General UI
         btn_add_account: "New Account",
         btn_add_character: "New Character",
@@ -113,6 +115,8 @@ const translations = {
         sidebar_levelzone: "Zona de Leveo",
         sidebar_dailyevent: "Eventos Diarios",
         sidebar_coupons: "Cupones",
+        sidebar_contadores: "Contadores",
+        page_title_contadores: "Contadores",
         // General UI
         btn_add_account: "Nueva Cuenta",
         btn_add_character: "Nuevo Personaje",
@@ -246,6 +250,7 @@ const favoritesView = document.getElementById('favorites-view');
 const itemsView = document.getElementById('items-view');
 const vacantesView = document.getElementById('vacantes-view');
 const couponsView = document.getElementById('coupons-view');
+const contadoresView = document.getElementById('contadores-view');
 
 let coupons = [];
 let activeCouponId = null;
@@ -254,6 +259,8 @@ let selectedRedeemAccountId = null;
 
 // Init
 let dbPath = '';
+let flyffPath = '';
+let flyffParams = '';
 
 async function fetchConfig() {
     try {
@@ -261,16 +268,26 @@ async function fetchConfig() {
         const data = await res.json();
         dbPath = data.path || '';
     } catch (e) { console.error(e); }
+
+    try {
+        const res = await fetch(`${API_URL}/config/flyff`);
+        const data = await res.json();
+        flyffPath = data.flyff_path || '';
+        flyffParams = data.flyff_params || '';
+    } catch (e) { console.error(e); }
 }
 
+// Initialize Timer Engine when document loads
 document.addEventListener('DOMContentLoaded', () => {
-    fetchConfig().then(() => {
-        fetchAccounts();
+    loadContadores();
+    startTimerEngine();
+    fetchConfig().then(async () => {
+        await fetchAccounts();
+        await fetchCharacters();
         applyTranslations();
         initSidebar();
     });
     updateTypeOptions();
-    // Pre-fetch events if needed? Or just when view switches.
 });
 
 function initSidebar() {
@@ -290,97 +307,49 @@ function toggleSidebar() {
 function switchView(view) {
     currentView = view;
     document.querySelectorAll('.nav-links li').forEach(li => li.classList.remove('active'));
-    document.querySelector(`.nav-links li[onclick="switchView('${view}')"]`).classList.add('active');
+    const clickedLi = document.querySelector(`.nav-links li[onclick="switchView('${view}')"]`);
+    if (clickedLi) clickedLi.classList.add('active');
+
+    // Remove active from all view sections
+    document.querySelectorAll('.view-section').forEach(section => section.classList.remove('active'));
 
     if (view === 'accounts') {
         accountsView.classList.add('active');
-        charactersView.classList.remove('active');
-        if (favoritesView) favoritesView.classList.remove('active');
-        if (itemsView) itemsView.classList.remove('active');
-        if (vacantesView) vacantesView.classList.remove('active');
-        if (levelZoneView) levelZoneView.classList.remove('active');
-        if (dailyEventView) dailyEventView.classList.remove('active');
-        if (couponsView) couponsView.classList.remove('active');
         pageTitle.innerHTML = `${i18n('page_title_accounts')} <span id="account-count" style="font-size:1rem; opacity:0.7; font-weight:400;">(${accounts.length})</span>`;
         fetchAccounts();
     } else if (view === 'characters') {
-        accountsView.classList.remove('active');
         charactersView.classList.add('active');
-        if (favoritesView) favoritesView.classList.remove('active');
-        if (itemsView) itemsView.classList.remove('active');
-        if (vacantesView) vacantesView.classList.remove('active');
-        if (levelZoneView) levelZoneView.classList.remove('active');
-        if (dailyEventView) dailyEventView.classList.remove('active');
-        if (couponsView) couponsView.classList.remove('active');
         pageTitle.innerHTML = `${i18n('page_title_characters')} <span id="char-count" style="font-size:1rem; opacity:0.7; font-weight:400;">(${characters.length})</span>`;
         fetchAccounts().then(() => fetchCharacters());
     } else if (view === 'favorites') {
-        accountsView.classList.remove('active');
-        charactersView.classList.remove('active');
         if (favoritesView) favoritesView.classList.add('active');
-        if (itemsView) itemsView.classList.remove('active');
-        if (vacantesView) vacantesView.classList.remove('active');
-        if (levelZoneView) levelZoneView.classList.remove('active');
-        if (dailyEventView) dailyEventView.classList.remove('active');
-        if (couponsView) couponsView.classList.remove('active');
         pageTitle.innerHTML = `${i18n('page_title_favorites')} <span id="fav-count" style="font-size:1rem; opacity:0.7; font-weight:400;">(0)</span>`;
         fetchAccounts().then(() => fetchCharacters());
     } else if (view === 'items') {
-        accountsView.classList.remove('active');
-        charactersView.classList.remove('active');
-        if (favoritesView) favoritesView.classList.remove('active');
         if (itemsView) itemsView.classList.add('active');
-        if (vacantesView) vacantesView.classList.remove('active');
-        if (levelZoneView) levelZoneView.classList.remove('active');
-        if (dailyEventView) dailyEventView.classList.remove('active');
-        if (couponsView) couponsView.classList.remove('active');
         pageTitle.innerHTML = i18n('page_title_items');
         fetchCharacters().then(() => fetchItems());
     } else if (view === 'vacantes') {
-        accountsView.classList.remove('active');
-        charactersView.classList.remove('active');
-        if (favoritesView) favoritesView.classList.remove('active');
-        if (itemsView) itemsView.classList.remove('active');
         if (vacantesView) vacantesView.classList.add('active');
-        if (levelZoneView) levelZoneView.classList.remove('active');
-        if (dailyEventView) dailyEventView.classList.remove('active');
-        if (couponsView) couponsView.classList.remove('active');
         pageTitle.innerHTML = `${i18n('page_title_vacantes')} <span id="vacantes-count" style="font-size:1rem; opacity:0.7; font-weight:400;">(0)</span>`;
         fetchAccounts().then(() => fetchCharacters().then(() => renderVacantes()));
     } else if (view === 'levelzone') {
-        accountsView.classList.remove('active');
-        charactersView.classList.remove('active');
-        if (favoritesView) favoritesView.classList.remove('active');
-        if (itemsView) itemsView.classList.remove('active');
-        if (vacantesView) vacantesView.classList.remove('active');
         if (levelZoneView) levelZoneView.classList.add('active');
-        if (dailyEventView) dailyEventView.classList.remove('active');
-        if (couponsView) couponsView.classList.remove('active');
         pageTitle.innerHTML = i18n('page_title_levelzone');
         fetchLevelQueue();
     } else if (view === 'dailyevent') {
-        accountsView.classList.remove('active');
-        charactersView.classList.remove('active');
-        if (favoritesView) favoritesView.classList.remove('active');
-        if (itemsView) itemsView.classList.remove('active');
-        if (vacantesView) vacantesView.classList.remove('active');
-        if (levelZoneView) levelZoneView.classList.remove('active');
         if (dailyEventView) dailyEventView.classList.add('active');
-        if (couponsView) couponsView.classList.remove('active');
         pageTitle.innerHTML = i18n('page_title_dailyevent');
         fetchDailyEvents();
     } else if (view === 'coupons') {
-        accountsView.classList.remove('active');
-        charactersView.classList.remove('active');
-        if (favoritesView) favoritesView.classList.remove('active');
-        if (itemsView) itemsView.classList.remove('active');
-        if (vacantesView) vacantesView.classList.remove('active');
-        if (levelZoneView) levelZoneView.classList.remove('active');
-        if (dailyEventView) dailyEventView.classList.remove('active');
         if (couponsView) couponsView.classList.add('active');
         pageTitle.innerHTML = i18n('page_title_coupons');
         // Ensure data exists before starting flow
         fetchAccounts().then(() => fetchCharacters().then(() => resetCouponFlow()));
+    } else if (view === 'contadores') {
+        if (contadoresView) contadoresView.classList.add('active');
+        pageTitle.innerHTML = i18n('page_title_contadores');
+        renderContadores();
     }
     updateHeaderButtons(view);
 }
@@ -388,13 +357,16 @@ function switchView(view) {
 function updateHeaderButtons(view) {
     const accUpload = document.getElementById('btn-upload-accounts');
     const charUpload = document.getElementById('btn-upload-characters');
+    const launchBtn = document.getElementById('btn-launch-selected');
 
     if (view === 'accounts') {
         if (accUpload) accUpload.style.display = 'inline-flex';
         if (charUpload) charUpload.style.display = 'none';
+        if (launchBtn) launchBtn.style.display = selectedAccountIds.size > 0 ? 'inline-flex' : 'none';
     } else {
         if (accUpload) accUpload.style.display = 'none';
         if (charUpload) charUpload.style.display = 'inline-flex';
+        if (launchBtn) launchBtn.style.display = 'none';
     }
 }
 
@@ -446,7 +418,25 @@ function renderItems() {
     const grid = document.getElementById('items-grid');
     if (!grid) return;
 
-    grid.innerHTML = items.map(item => {
+    const searchVal = document.getElementById('item-search-input')?.value.toLowerCase().trim() || '';
+
+    let filteredItems = [...items];
+    if (searchVal) {
+        filteredItems = filteredItems.filter(item => {
+            const char = characters.find(c => c.id === parseInt(item.character_id));
+            const charName = char ? char.name.toLowerCase() : '';
+            const itemName = (item.name || '').toLowerCase();
+            const itemType = (item.item_type || '').toLowerCase();
+            const itemDesc = (item.description || '').toLowerCase();
+            
+            return itemName.includes(searchVal) || 
+                   itemType.includes(searchVal) || 
+                   itemDesc.includes(searchVal) || 
+                   charName.includes(searchVal);
+        });
+    }
+
+    grid.innerHTML = filteredItems.map(item => {
         const char = characters.find(c => c.id === parseInt(item.character_id));
         const charName = char ? char.name : 'Unknown';
         
@@ -510,6 +500,7 @@ function renderAccounts() {
                     <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountEmail(${acc.id})" title="${i18n('action_copy_email')}"><i class="fa-solid fa-envelope"></i> Email</button>
                     <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountPassword(${acc.id})" title="${i18n('action_copy_pass')}"><i class="fa-solid fa-key"></i> Pass</button>
                     <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountPin(${acc.id})" title="${i18n('action_copy_pin')}"><i class="fa-solid fa-lock"></i> PIN</button>
+                    <button class="btn-autologin" onclick="triggerAutoLogin(${acc.id})" title="Auto-Login (UAC)"><i class="fa-solid fa-keyboard"></i> Auto-Login</button>
                 </div>
             </div>
         </div>
@@ -518,6 +509,9 @@ function renderAccounts() {
     // Update Batch Button
     const btn = document.getElementById('btn-delete-selected');
     if (btn) btn.style.display = selectedAccountIds.size > 0 ? 'inline-flex' : 'none';
+
+    const launchBtn = document.getElementById('btn-launch-selected');
+    if (launchBtn) launchBtn.style.display = (selectedAccountIds.size > 0 && currentView === 'accounts') ? 'inline-flex' : 'none';
 }
 
 // Count remains at 240 as anchor
@@ -534,6 +528,8 @@ let charTypes = JSON.parse(localStorage.getItem('charTypes')) || ['Main', 'AFK F
 // Config Modal Logic
 function openConfigModal() {
     document.getElementById('config-db-path').value = dbPath;
+    document.getElementById('config-flyff-path').value = flyffPath;
+    document.getElementById('config-flyff-params').value = flyffParams;
     document.getElementById('config-threshold').value = levelThreshold;
     renderTypesConfig();
     document.getElementById('config-modal').classList.add('show');
@@ -545,6 +541,18 @@ async function browseExcelPath() {
         const data = await res.json();
         if (data.path) {
             document.getElementById('config-db-path').value = data.path;
+        } else if (data.error) {
+            alert(data.error);
+        }
+    } catch (e) { console.error(e); }
+}
+
+async function browseFlyffExePath() {
+    try {
+        const res = await fetch(`${API_URL}/config/browse-exe`);
+        const data = await res.json();
+        if (data.path) {
+            document.getElementById('config-flyff-path').value = data.path;
         } else if (data.error) {
             alert(data.error);
         }
@@ -572,29 +580,46 @@ function closeConfigModal() {
     document.getElementById('config-modal').classList.remove('show');
 }
 
-function saveConfig() {
+async function saveConfig() {
     const val = parseInt(document.getElementById('config-threshold').value);
     levelThreshold = isNaN(val) ? 0 : val;
     localStorage.setItem('levelThreshold', levelThreshold);
-    // Note: Types are saved immediately on add/delete
     
     const newPath = document.getElementById('config-db-path').value.trim();
+    const newFlyffPath = document.getElementById('config-flyff-path').value.trim();
+    const newFlyffParams = document.getElementById('config-flyff-params').value.trim();
+
     if (newPath !== dbPath) {
         dbPath = newPath;
-        fetch(`${API_URL}/config/db-path`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ path: dbPath })
-        }).then(res => res.json()).then(data => {
-            if(data.error) alert(data.error);
-            else {
-                alert(i18n('msg_save_config_success'));
-                fetchAccounts();
-                if (currentView === 'characters' || currentView === 'vacantes' || currentView === 'levelzone') {
-                    fetchCharacters();
-                }
-            }
-        });
+        try {
+            const res = await fetch(`${API_URL}/config/db-path`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path: dbPath })
+            });
+            const data = await res.json();
+            if (data.error) alert(data.error);
+        } catch (e) { console.error(e); }
+    }
+
+    if (newFlyffPath !== flyffPath || newFlyffParams !== flyffParams) {
+        flyffPath = newFlyffPath;
+        flyffParams = newFlyffParams;
+        try {
+            const res = await fetch(`${API_URL}/config/flyff`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ flyff_path: flyffPath, flyff_params: flyffParams })
+            });
+            const data = await res.json();
+            if (data.error) alert(data.error);
+        } catch (e) { console.error(e); }
+    }
+
+    alert(i18n('msg_save_config_success'));
+    fetchAccounts();
+    if (currentView === 'characters' || currentView === 'vacantes' || currentView === 'levelzone') {
+        fetchCharacters();
     }
 
     closeConfigModal();
@@ -655,6 +680,7 @@ function renderCharacters() {
     // Get Filter Values
     const accountId = document.getElementById('account-filter')?.value;
     const type = document.getElementById('type-filter')?.value;
+    const classFilter = document.getElementById('class-filter')?.value;
     const targetLevelStr = document.getElementById('level-filter')?.value;
     const nameSearch = document.getElementById('name-filter')?.value ? document.getElementById('name-filter').value.toLowerCase() : "";
     const sortBy = document.getElementById('sort-by')?.value;
@@ -674,6 +700,11 @@ function renderCharacters() {
     // Filter by Type
     if (type) {
         list = list.filter(c => c.char_type === type);
+    }
+
+    // Filter by Class
+    if (classFilter) {
+        list = list.filter(c => c.class_name === classFilter);
     }
 
     // Filter by Level Threshold
@@ -794,6 +825,9 @@ function renderCharactersHTML(list, targetGridId = 'characters-grid') {
                         <p>${i18n('field_level')} <span class="value">${char.level || 0}</span></p>
                         <p>${i18n('field_class')} <span class="value">${char.class_name || 'None'}</span></p>
                         <p>${i18n('settings_char_types')} <span class="badge badge-${charTypeLower}">${charType}</span></p>
+                        <div class="recommended-spot">
+                            <i class="fa-solid fa-map-location-dot"></i> <span>${getRecommendedZone(char.level)}</span>
+                        </div>
 
                         <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:15px;">
                             <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyToClipboard('${getAccountEmail(char.account_id)}')" title="${i18n('action_copy_email')}"><i class="fa-solid fa-envelope"></i> Email</button>
@@ -1986,3 +2020,471 @@ function copyText(text, event) {
     });
 }
 
+// =========================================================
+// PC Launcher, Compact Mode, & Leveling Recommendations
+// =========================================================
+
+async function launchSelectedAccounts() {
+    const ids = Array.from(selectedAccountIds);
+    if (ids.length === 0) return;
+    
+    try {
+        const res = await fetch(`${API_URL}/accounts/launch`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert(data.message);
+            selectedAccountIds.clear();
+            renderAccounts();
+        } else {
+            alert(`Error: ${data.error}`);
+        }
+    } catch (e) {
+        console.error(e);
+        alert(i18n('msg_error'));
+    }
+}
+
+let isCompact = false;
+let compactCycles = {}; // Stores { accountId: 'email' | 'password' | 'pin' }
+
+async function toggleCompactMode() {
+    isCompact = !isCompact;
+    document.body.classList.toggle('compact-mode', isCompact);
+    
+    const compactView = document.getElementById('compact-view');
+    
+    if (isCompact) {
+        compactView.style.display = 'flex';
+        const searchInput = document.getElementById('compact-search');
+        if (searchInput) searchInput.value = ''; // Reset search on open
+        
+        try {
+            await fetchAccounts();
+            await fetchCharacters();
+        } catch (e) { console.error("Error fetching compact mode data:", e); }
+        renderCompactList();
+    } else {
+        compactView.style.display = 'none';
+        switchView(currentView);
+    }
+}
+
+function renderCompactList() {
+    const listEl = document.getElementById('compact-list');
+    if (!listEl) return;
+    
+    const searchVal = document.getElementById('compact-search')?.value.toLowerCase().trim() || '';
+    
+    // Filter accounts by email or character names
+    let filteredAccounts = [...accounts];
+    if (searchVal) {
+        filteredAccounts = filteredAccounts.filter(acc => {
+            const emailMatch = acc.email.toLowerCase().includes(searchVal);
+            
+            const accChars = characters.filter(c => c.account_id == acc.id);
+            const charMatch = accChars.some(char => char.name.toLowerCase().includes(searchVal));
+            
+            return emailMatch || charMatch;
+        });
+    }
+    
+    listEl.innerHTML = filteredAccounts.map(acc => {
+        const accChars = characters.filter(c => c.account_id == acc.id);
+        const charHtml = accChars.map(char => `
+            <div class="compact-char-item">
+                <span>${char.name} (${char.class_name || 'Vagrant'})</span>
+                <span class="lvl">Lvl ${char.level || 0}</span>
+            </div>
+        `).join('');
+        
+        const currentState = compactCycles[acc.id] || 'email';
+        let buttonText = 'Copiar Email';
+        if (currentState === 'password') buttonText = 'Copiar Contraseña';
+        if (currentState === 'pin') buttonText = `PIN: ${acc.pin || 'N/A'}`;
+        
+        return `
+            <div class="compact-card" id="compact-card-${acc.id}">
+                <div class="compact-card-header">
+                    <span style="font-size:0.85rem; opacity:0.8; word-break:break-all;">${acc.email}</span>
+                    <div style="display:flex; gap:4px;">
+                        <button class="icon-btn" onclick="triggerAutoLogin(${acc.id})" title="Auto-Login (UAC)"><i class="fa-solid fa-keyboard" style="font-size:0.8rem;"></i></button>
+                        <button class="icon-btn" onclick="launchSingleAccount(${acc.id})" title="Lanzar en PC"><i class="fa-solid fa-play" style="font-size:0.8rem;"></i></button>
+                    </div>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:4px; margin: 4px 0;">
+                    ${charHtml || '<div style="font-size:0.7rem; opacity:0.5; font-style:italic;">Sin personajes</div>'}
+                </div>
+                <button class="compact-btn-cycle" id="cycle-btn-${acc.id}" onclick="cycleCredentials(${acc.id})">
+                    ${buttonText}
+                </button>
+            </div>
+        `;
+    }).join('');
+}
+
+async function launchSingleAccount(accountId) {
+    try {
+        const res = await fetch(`${API_URL}/accounts/launch`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: [accountId] })
+        });
+        const data = await res.json();
+        if (!res.ok) alert(data.error);
+    } catch (e) { console.error(e); }
+}
+
+function cycleCredentials(accountId) {
+    const acc = accounts.find(a => a.id === accountId);
+    if (!acc) return;
+    
+    const currentState = compactCycles[accountId] || 'email';
+    const btn = document.getElementById(`cycle-btn-${accountId}`);
+    
+    if (currentState === 'email') {
+        copyToClipboard(acc.email);
+        compactCycles[accountId] = 'password';
+        if (btn) btn.innerText = 'Copiar Contraseña';
+    } else if (currentState === 'password') {
+        copyToClipboard(acc.password);
+        compactCycles[accountId] = 'pin';
+        if (btn) {
+            btn.innerText = `PIN: ${acc.pin || 'N/A'}`;
+        }
+    } else if (currentState === 'pin') {
+        if (acc.pin) copyToClipboard(acc.pin);
+        compactCycles[accountId] = 'email';
+        if (btn) btn.innerText = 'Copiar Email';
+    }
+}
+
+function getRecommendedZone(level) {
+    if (!level) return 'Desconocido';
+    const lvl = parseInt(level);
+    if (lvl < 15) return 'Flaris (Aibatts/Lawolfs)';
+    if (lvl >= 15 && lvl < 25) return 'Flaris (Bangs) / Saint Morning (Wagsacks)';
+    if (lvl >= 25 && lvl < 40) return 'Saint Morning (Mr. Pumpkins / Dumbulls)';
+    if (lvl >= 40 && lvl < 50) return 'Garden of Rhisis (Basques / Pranksters)';
+    if (lvl >= 50 && lvl < 60) return 'Darkon 2 (Leyenas / Fangubs)';
+    if (lvl >= 60 && lvl < 70) return 'Darkon 2 (Cranes) / Azria (Yettis)';
+    if (lvl >= 70 && lvl < 80) return 'Darkon 3 (Carrierbombs) / Azria (Augus)';
+    if (lvl >= 80 && lvl < 90) return 'Darkon 3 (Mushpoies) / Azria (Ghosts)';
+    if (lvl >= 90 && lvl < 100) return 'Darkon 3 (Watangkas) / Azria (Mammoths)';
+    if (lvl >= 100 && lvl < 110) return 'Darkon 3 (Luias) / Azria (Cannibal Yettis)';
+    if (lvl >= 110 && lvl < 120) return 'Volcane (Meteonyker)';
+    if (lvl >= 120 && lvl < 130) return 'Shaduwar (Lykan) / Tower B1-B2';
+    return 'Valley of the Risen / Kaillun / Bahara';
+}
+
+// ---------------------------------------------------------
+// Auto-Login API call
+// ---------------------------------------------------------
+async function triggerAutoLogin(accountId) {
+    // Visual feedback
+    const toast = document.createElement('div');
+    toast.style.position = 'fixed';
+    toast.style.bottom = '20px';
+    toast.style.left = '50%';
+    toast.style.transform = 'translateX(-50%)';
+    toast.style.background = 'rgba(212, 175, 55, 0.95)';
+    toast.style.color = '#000';
+    toast.style.padding = '12px 24px';
+    toast.style.borderRadius = '30px';
+    toast.style.zIndex = '9999';
+    toast.style.fontWeight = 'bold';
+    toast.style.boxShadow = '0 10px 25px rgba(0,0,0,0.5)';
+    toast.style.backdropFilter = 'blur(10px)';
+    toast.style.border = '1px solid #fff';
+    toast.innerHTML = '<i class="fa-solid fa-keyboard"></i> Iniciando juego y Auto-Login... Por favor espera';
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.transition = 'opacity 0.5s';
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 500);
+    }, 4000);
+
+    try {
+        const res = await fetch(`${API_URL}/accounts/${accountId}/autologin`, {
+            method: 'POST'
+        });
+        if (!res.ok) {
+            const data = await res.json();
+            alert(`Error en Auto-Login: ${data.error || 'Desconocido'}`);
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Error conectando al servidor para el Auto-Login.');
+    }
+}
+
+// ---------------------------------------------------------
+// Contadores Engine
+// ---------------------------------------------------------
+let contadores = [];
+
+// Lista de contadores por defecto
+const DEFAULT_CONTADORES = [
+    { id: 'default_cw', name: 'Clockworks', respawnTime: 2880, endTime: null, isMuted: false },
+    { id: 'default_rm', name: 'Red Meteonyker', respawnTime: 120, endTime: null, isMuted: false },
+    { id: 'default_gm', name: 'Giant Mushpoie', respawnTime: 30, endTime: null, isMuted: false }
+];
+
+// Sound Synthesizer using Web Audio API (Dual-beeps, completely virtual)
+let audioCtx = null;
+function playAlarmSound() {
+    try {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        
+        const now = audioCtx.currentTime;
+        
+        // Synthesize Beep 1
+        const osc1 = audioCtx.createOscillator();
+        const gain1 = audioCtx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(880, now); // A5 note
+        gain1.gain.setValueAtTime(0.3, now);
+        gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        osc1.connect(gain1);
+        gain1.connect(audioCtx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.35);
+
+        // Synthesize Beep 2 (offset)
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(1046.5, now + 0.25); // C6 note
+        gain2.gain.setValueAtTime(0.3, now + 0.25);
+        gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.55);
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.start(now + 0.25);
+        osc2.stop(now + 0.6);
+        
+    } catch (e) {
+        console.error("No se pudo reproducir la alarma por restricciones de la API de Audio:", e);
+    }
+}
+
+// Cargar contadores desde localStorage (con migración desde legacy bossTimers)
+function loadContadores() {
+    let saved = localStorage.getItem('contadores');
+    if (!saved) {
+        saved = localStorage.getItem('bossTimers');
+        if (saved) {
+            localStorage.setItem('contadores', saved);
+            localStorage.removeItem('bossTimers');
+        }
+    }
+
+    if (saved) {
+        try {
+            contadores = JSON.parse(saved);
+        } catch (e) {
+            contadores = [...DEFAULT_CONTADORES];
+        }
+    } else {
+        contadores = [...DEFAULT_CONTADORES];
+        saveContadores();
+    }
+}
+
+function saveContadores() {
+    localStorage.setItem('contadores', JSON.stringify(contadores));
+}
+
+// Renders the Contadores Grid
+function renderContadores() {
+    const grid = document.getElementById('contadores-grid');
+    if (!grid) return;
+
+    loadContadores();
+
+    grid.innerHTML = contadores.map(contador => {
+        const isActive = contador.endTime !== null;
+        let timeLeft = 0;
+        let timeString = '00:00:00';
+        let cardClass = 'card contador-card';
+
+        if (isActive) {
+            timeLeft = Math.max(0, contador.endTime - Date.now());
+            
+            // Format time left
+            const hours = Math.floor(timeLeft / 3600000);
+            const minutes = Math.floor((timeLeft % 3600000) / 60000);
+            const seconds = Math.floor((timeLeft % 60000) / 1000);
+            
+            timeString = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            
+            if (timeLeft > 0) {
+                cardClass += ' timer-active';
+            } else {
+                cardClass += ' timer-warning';
+            }
+        } else {
+            // Default time string shown is the respawn duration
+            const hours = Math.floor((contador.respawnTime * 60000) / 3600000);
+            const minutes = Math.floor(((contador.respawnTime * 60000) % 3600000) / 60000);
+            timeString = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
+        }
+
+        const deleteButton = `<button class="icon-btn delete" onclick="deleteContador('${contador.id}')" title="Eliminar Contador" style="width:28px; height:28px;"><i class="fa-solid fa-trash"></i></button>`;
+
+        return `
+            <div class="${cardClass}" id="contador-card-${contador.id}">
+                <div class="card-bar" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:0.8rem; margin-bottom:0.8rem; border-bottom:1px solid rgba(255,255,255,0.05);">
+                    <button class="icon-btn" onclick="toggleMuteContador('${contador.id}')" title="${contador.isMuted ? 'Desmutear Alarma' : 'Mutear Alarma'}" style="color:${contador.isMuted ? 'rgba(255,255,255,0.3)' : 'var(--primary)'}; width:28px; height:28px;">
+                        <i class="fa-solid ${contador.isMuted ? 'fa-volume-mute' : 'fa-volume-high'}"></i>
+                    </button>
+                    <div style="font-size:0.8rem; opacity:0.6;"><i class="fa-solid fa-rotate-left"></i> ${contador.respawnTime}m</div>
+                    ${deleteButton}
+                </div>
+                <div class="card-header" style="padding:0; margin-bottom:0.5rem; justify-content:center;">
+                    <div class="card-title" style="font-size:1.2rem; text-align:center; font-weight:700;">${contador.name}</div>
+                </div>
+                <div class="card-content">
+                    <div class="timer-display" id="timer-display-${contador.id}">${timeString}</div>
+                </div>
+                <div class="contador-card-footer">
+                    ${isActive && timeLeft > 0 ? 
+                        `<button class="btn-secondary" onclick="stopContador('${contador.id}')"><i class="fa-solid fa-stop"></i> Detener</button>` : 
+                        `<button class="btn-primary" onclick="startContador('${contador.id}')"><i class="fa-solid fa-play"></i> Iniciar</button>`
+                    }
+                    <button class="btn-secondary" onclick="startContador('${contador.id}')" title="Reiniciar desde el inicio"><i class="fa-solid fa-redo"></i> Reset</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Timer loops every second updating countdown displays
+let timerInterval = null;
+function startTimerEngine() {
+    if (timerInterval) clearInterval(timerInterval);
+    
+    timerInterval = setInterval(() => {
+        contadores.forEach(contador => {
+            if (contador.endTime !== null) {
+                const timeLeft = contador.endTime - Date.now();
+                const card = document.getElementById(`contador-card-${contador.id}`);
+                const display = document.getElementById(`timer-display-${contador.id}`);
+                
+                if (timeLeft <= 0) {
+                    if (display) display.innerText = '00:00:00';
+                    if (card && !card.classList.contains('timer-warning')) {
+                        card.className = 'card contador-card timer-warning';
+                        if (!contador.isMuted) {
+                            playAlarmSound();
+                        }
+                    }
+                } else {
+                    const hours = Math.floor(timeLeft / 3600000);
+                    const minutes = Math.floor((timeLeft % 3600000) / 60000);
+                    const seconds = Math.floor((timeLeft % 60000) / 1000);
+                    
+                    if (display) {
+                        display.innerText = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                    }
+                    if (card && !card.classList.contains('timer-active')) {
+                        card.className = 'card contador-card timer-active';
+                    }
+                }
+            }
+        });
+    }, 1000);
+}
+
+// Timer actions
+function startContador(contadorId) {
+    const contador = contadores.find(c => c.id === contadorId);
+    if (!contador) return;
+
+    contador.endTime = Date.now() + (contador.respawnTime * 60 * 1000);
+    saveContadores();
+    renderContadores();
+}
+
+function stopContador(contadorId) {
+    const contador = contadores.find(c => c.id === contadorId);
+    if (!contador) return;
+
+    contador.endTime = null;
+    saveContadores();
+    renderContadores();
+}
+
+function toggleMuteContador(contadorId) {
+    const contador = contadores.find(c => c.id === contadorId);
+    if (!contador) return;
+
+    contador.isMuted = !contador.isMuted;
+    saveContadores();
+    renderContadores();
+}
+
+function deleteContador(contadorId) {
+    if (!confirm('¿Eliminar este contador?')) return;
+    contadores = contadores.filter(c => c.id !== contadorId);
+    saveContadores();
+    renderContadores();
+}
+
+function restoreDefaultContadores() {
+    if (!confirm('¿Restaurar los contadores por defecto (Clockworks, Red Meteonyker, Giant Mushpoie)? Esto agregará los que falten.')) return;
+    
+    DEFAULT_CONTADORES.forEach(defCont => {
+        if (!contadores.some(c => c.id === defCont.id)) {
+            contadores.push({ ...defCont });
+        }
+    });
+    
+    saveContadores();
+    renderContadores();
+}
+
+// Modal actions
+function openContadorModal() {
+    document.getElementById('bt-name-input').value = '';
+    document.getElementById('bt-time-input').value = '';
+    document.getElementById('contadores-modal').classList.add('show');
+}
+
+function closeContadorModal() {
+    document.getElementById('contadores-modal').classList.remove('show');
+}
+
+function submitAddContador() {
+    const name = document.getElementById('bt-name-input').value.trim();
+    const duration = parseInt(document.getElementById('bt-time-input').value);
+
+    if (!name || isNaN(duration) || duration <= 0) {
+        alert('Por favor introduce un nombre válido y un tiempo en minutos.');
+        return;
+    }
+
+    const newContador = {
+        id: 'custom_' + Date.now(),
+        name: name,
+        respawnTime: duration,
+        endTime: null,
+        isMuted: false
+    };
+
+    contadores.push(newContador);
+    saveContadores();
+    closeContadorModal();
+    renderContadores();
+}
+
+// Initialize Timer Engine when document loads
+document.addEventListener('DOMContentLoaded', () => {
+    loadContadores();
+    startTimerEngine();
+});

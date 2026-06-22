@@ -13,9 +13,9 @@ if %errorLevel% neq 0 (
 :: Regresar al directorio del script
 cd /d "%~dp0"
 
-echo ===================================================
-echo   INSTALACION Y CONFIGURACION - MANAGER ACCOUNT
-echo ===================================================
+echo ==========================================================
+echo   INSTALACION Y CONFIGURACION - MANAGER ACCOUNT (FLYFF)
+echo ==========================================================
 echo.
 
 :: 2. Verificar Python
@@ -25,7 +25,7 @@ if %errorLevel% neq 0 (
     echo [!] Python no detectado. Descargando instalador oficial...
     powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/3.12.2/python-3.12.2-amd64.exe' -OutFile 'python-installer.exe'"
     
-    echo [*] Instalando Python silenciosamente ^(espere un momento^)...
+    echo [*] Instalando Python silenciosamente (espere un momento)...
     start /wait "" python-installer.exe /quiet InstallAllUsers=1 PrependPath=1 Include_test=0
     del python-installer.exe
     
@@ -74,9 +74,9 @@ python -m pip install --upgrade pip >nul 2>&1
 pip install -r requirements.txt
 
 echo.
-echo ===================================================
-echo      ¡INSTALACION COMPLETADA CON EXITO!
-echo ===================================================
+echo ==========================================================
+echo         ¡INSTALACION COMPLETADA CON EXITO!
+echo ==========================================================
 echo.
 echo Ahora puedes cerrar este script e iniciar la aplicacion
 echo usando directamente 'ManagerAccount.bat'.

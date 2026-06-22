@@ -1,30 +1,35 @@
 @echo off
 title Pruebas Automáticas - ManagerAccount
-echo ========================================================
-echo Iniciando entorno virtual y ejecutando pytest...
-echo ========================================================
+setlocal enabledelayedexpansion
+
+:: Cambiar al directorio del script
+cd /d "%~dp0"
+
+echo ==========================================================
+echo       EJECUTANDO PRUEBAS AUTOMATICAS - PYTEST
+echo ==========================================================
 echo.
 
-:: Cambiar al directorio 'backend' relativo a donde se encuentra el .bat
-cd /d "%~dp0backend"
-
 :: Verificar que el entorno virtual exista
-if not exist "venv\Scripts\activate.bat" (
-    echo [ERROR] No se encontro el entorno virtual venv en la carpeta backend.
-    echo Asegurate de haber instalado las dependencias primero.
+if not exist "backend\venv\Scripts\activate.bat" (
+    echo [ERROR] No se encontro el entorno virtual venv en backend.
+    echo Por favor, ejecuta primero el script 'instalar.bat'.
     echo.
     pause
     exit /b 1
 )
 
 :: Activar entorno virtual
+cd backend
 call venv\Scripts\activate.bat
 
 :: Ejecutar las pruebas
 pytest tests/ -v
 
 echo.
-echo ========================================================
-echo Ejecucion completada. Puedes seguir usando esta terminal.
-echo ========================================================
-cmd /k
+echo ==========================================================
+echo                  EJECUCION COMPLETADA
+echo ==========================================================
+echo.
+pause
+exit /b

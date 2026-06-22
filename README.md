@@ -5,8 +5,19 @@
 ## 🚀 Funcionalidades Principales
 
 - **Gestión de Cuentas:** Almacena y organiza correos electrónicos, contraseñas y códigos PIN de seguridad.
+- **Auto-Login Inteligente (Windows):** 
+    - Escribe automáticamente el correo y contraseña en la ventana de login del juego usando la API nativa `SendInput` (vía `ctypes`).
+    - Detecta la ventana del juego de forma automática y espera a que el usuario presione y suelte la tecla `Tab` físicamente para iniciar la inyección de forma segura.
+    - Requiere ejecutar el servidor como Administrador (UAC) para poder interactuar con la ventana del juego.
 - **Administración de Personajes:** Registra nombres, niveles, clases y tipos de personajes asociados a cada cuenta.
-- **Control de Inventario:** Seguimiento de ítems importantes por personaje con descripciones detalladas.
+- **Control de Inventario Cruzado y Buscador:** 
+    - Seguimiento de objetos valiosos por personaje.
+    - Incluye un buscador en tiempo real que permite filtrar ítems por nombre, tipo, descripción o personaje dueño instantáneamente.
+- **Contadores de Respawn (Alarmas):**
+    - Panel interactivo para gestionar tiempos de reaparición (ej. gigantes como Clockworks o eventos personalizados).
+    - Permite silenciar (mutear), pausar o reiniciar contadores, así como borrar cualquier contador (tanto por defecto como personalizados).
+    - Botón para restaurar los contadores por defecto que hayan sido eliminados.
+    - Generación de pitidos de alarma sintetizados dinámicamente mediante **Web Audio API** (sin necesidad de archivos de audio externos).
 - **Prioridades de Leveling:** Sistema para anotar y priorizar los objetivos de nivel de cada personaje.
 - **Eventos Diarios:** Seguimiento de participación y progreso en eventos del juego.
 - **Sistema de Cupones:** Registro de códigos promocionales y control de cuáles han sido canjeados por qué personaje.

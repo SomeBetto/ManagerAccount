@@ -1,13 +1,13 @@
 :root {
-    --bg-dark: #0f172a;
-    --primary: #6366f1;
-    --primary-hover: #4f46e5;
-    --secondary: #334155;
-    --text-main: #f8fafc;
-    --text-muted: #94a3b8;
-    --glass-bg: rgba(30, 41, 59, 0.7);
-    --glass-border: rgba(255, 255, 255, 0.1);
-    --card-hover: rgba(51, 65, 85, 0.5);
+    --bg-dark: #0a0907;
+    --primary: #d4af37;
+    --primary-hover: #ffd700;
+    --secondary: #1a1712;
+    --text-main: #f5f3ef;
+    --text-muted: #a69f91;
+    --glass-bg: rgba(15, 13, 10, 0.75);
+    --glass-border: rgba(212, 175, 55, 0.15);
+    --card-hover: rgba(30, 27, 22, 0.6);
     --success: #10b981;
     --danger: #ef4444;
 }
@@ -25,6 +25,25 @@ body {
     height: 100vh;
     overflow: hidden;
     display: flex;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-dark);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--secondary);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary);
 }
 
 /* Background Effects */
@@ -48,7 +67,7 @@ body {
 .orb-2 {
     width: 500px;
     height: 500px;
-    background: #ec4899;
+    background: #5c4308;
     bottom: -150px;
     right: -150px;
     animation: moveOrb2 25s infinite alternate;
@@ -117,7 +136,7 @@ body {
 
 .nav-links li:hover,
 .nav-links li.active {
-    background: rgba(99, 102, 241, 0.1);
+    background: rgba(212, 175, 55, 0.15);
     color: var(--text-main);
 }
 
@@ -134,7 +153,8 @@ body {
 }
 
 .sidebar.collapsed .logo span,
-.sidebar.collapsed .nav-links span {
+.sidebar.collapsed .nav-links span,
+.sidebar.collapsed .compact-btn span {
     display: none;
 }
 
@@ -201,8 +221,8 @@ h1 {
     border: none;
     padding: 0.75rem 1.5rem;
     border-radius: 12px;
-    color: white;
-    font-weight: 600;
+    color: #0d0d0c;
+    font-weight: 700;
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s;
     display: flex;
@@ -212,7 +232,7 @@ h1 {
 
 .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+    box-shadow: 0 4px 12px rgba(212, 175, 55, 0.4);
 }
 
 .btn-secondary {
@@ -300,14 +320,14 @@ h1 {
     left: 0;
     width: 100%;
     height: 4px;
-    background: linear-gradient(90deg, var(--primary), #ec4899);
+    background: linear-gradient(90deg, var(--primary), #ffd700);
     opacity: 0;
     transition: opacity 0.3s;
 }
 
 .card:hover {
     transform: translateY(-5px);
-    border-color: rgba(99, 102, 241, 0.3);
+    border-color: rgba(212, 175, 55, 0.4);
     background: var(--card-hover);
 }
 
@@ -355,7 +375,7 @@ h1 {
 
 .icon-btn:hover {
     background: var(--primary);
-    color: white;
+    color: #0d0d0c;
 }
 
 .icon-btn.delete:hover {
@@ -418,7 +438,7 @@ h1 {
 }
 
 .modal-content {
-    background: #1e293b;
+    background: #151310;
     border: 1px solid var(--glass-border);
     border-radius: 24px;
     padding: 2rem;
@@ -470,7 +490,7 @@ h1 {
 .form-group select {
     width: 100%;
     padding: 0.75rem;
-    background: rgba(15, 23, 42, 0.5);
+    background: rgba(10, 9, 7, 0.6);
     border: 1px solid var(--glass-border);
     border-radius: 10px;
     color: white;
@@ -519,4 +539,189 @@ h1 {
 .credential-pill span {
     font-family: monospace;
     letter-spacing: 0.5px;
-}
+}
+
+/* Compact Mode Styles */
+body.compact-mode .sidebar {
+    display: none !important;
+}
+
+body.compact-mode .main-content {
+    padding: 0.75rem !important;
+}
+
+body.compact-mode header {
+    display: none !important;
+}
+
+body.compact-mode .view-section {
+    display: none !important;
+}
+
+body.compact-mode #compact-view {
+    display: flex !important;
+}
+
+/* Recommended Spot Badge */
+.recommended-spot {
+    margin-top: 8px;
+    padding: 8px;
+    background: rgba(212, 175, 55, 0.08);
+    border: 1px dashed rgba(212, 175, 55, 0.25);
+    border-radius: 8px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.recommended-spot span {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+/* Compact view elements */
+.compact-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: transform 0.2s, border-color 0.2s;
+}
+
+.compact-card:hover {
+    border-color: rgba(212, 175, 55, 0.4);
+    background: var(--card-hover);
+}
+
+.compact-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    font-weight: 650;
+    color: var(--text-main);
+}
+
+.compact-btn-cycle {
+    background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+    border: none;
+    padding: 6px 12px;
+    border-radius: 8px;
+    color: #0d0d0c;
+    font-weight: 700;
+    font-size: 0.75rem;
+    cursor: pointer;
+    text-align: center;
+    transition: transform 0.1s;
+    width: 100%;
+}
+
+.compact-btn-cycle:active {
+    transform: scale(0.95);
+}
+
+.compact-char-item {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    display: flex;
+    justify-content: space-between;
+}
+
+.compact-char-item span.lvl {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+/* UAC Auto-Login Button Styles */
+.btn-autologin {
+    border-color: rgba(212, 175, 55, 0.4);
+    color: var(--primary);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: transparent;
+}
+
+.btn-autologin:hover {
+    background: rgba(212, 175, 55, 0.1);
+    border-color: var(--primary);
+    color: var(--primary-hover);
+}
+
+/* Contadores CSS */
+.contador-card, .boss-card {
+    border-left: 4px solid var(--primary);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 200px;
+}
+
+.contador-card.timer-active, .boss-card.timer-active {
+    border-left-color: var(--success);
+}
+
+.contador-card.timer-warning, .boss-card.timer-warning {
+    border-left-color: var(--danger);
+    animation: pulseWarning 1.5s infinite alternate;
+}
+
+@keyframes pulseWarning {
+    0% {
+        box-shadow: 0 0 5px rgba(239, 68, 68, 0.2);
+        border-color: rgba(239, 68, 68, 0.3);
+    }
+    100% {
+        box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+        border-color: rgba(239, 68, 68, 0.8);
+    }
+}
+
+.timer-display {
+    font-size: 2.2rem;
+    font-weight: 700;
+    font-family: monospace, monospace;
+    text-align: center;
+    margin: 1rem 0;
+    color: var(--text-muted);
+    text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    letter-spacing: 1px;
+}
+
+.timer-active .timer-display {
+    color: var(--success);
+    text-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+}
+
+.timer-warning .timer-display {
+    color: var(--danger);
+    text-shadow: 0 0 15px rgba(239, 68, 68, 0.6);
+    animation: flashText 1s infinite alternate;
+}
+
+@keyframes flashText {
+    0% { opacity: 0.6; }
+    100% { opacity: 1; }
+}
+
+.contador-card-footer, .boss-card-footer {
+    display: flex;
+    gap: 8px;
+    margin-top: 15px;
+}
+
+.contador-card-footer button, .boss-card-footer button {
+    flex: 1;
+    padding: 0.4rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
