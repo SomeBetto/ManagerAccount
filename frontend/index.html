@@ -42,6 +42,8 @@
                         data-i18n="sidebar_coupons">Coupons</span></li>
                 <li onclick="switchView('contadores')"><i class="fa-solid fa-clock"></i> <span
                         data-i18n="sidebar_contadores">Contadores</span></li>
+                <li onclick="switchView('fashion')" style="display:none;"><i class="fa-solid fa-shirt"></i> <span
+                        data-i18n="sidebar_fashion">Fashion Viewer</span></li>
             </ul>
             <button class="sidebar-toggle compact-btn" onclick="toggleCompactMode()" title="Modo Compacto / Ventana Overlay" style="margin-top:auto; margin-bottom:10px; border-color:var(--primary); color:var(--primary);">
                 <i class="fa-solid fa-compress"></i> <span>Modo Compacto</span>
@@ -96,6 +98,12 @@
             </header>
 
             <div id="accounts-view" class="view-section active">
+                <div class="filter-bar" style="margin-bottom: 1.5rem;">
+                    <div class="filter-group">
+                        <input type="text" id="account-search-input" placeholder="Buscar cuenta por correo..." oninput="renderAccounts()"
+                            style="padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.05); color: white; width: 100%; max-width: 400px; outline: none;">
+                    </div>
+                </div>
                 <div class="card-grid" id="accounts-grid">
                     <!-- Accounts interpolated here -->
                 </div>
@@ -237,6 +245,257 @@
                 </header>
                 <div class="card-grid" id="contadores-grid">
                     <!-- Contadores cards populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Fashion Viewer View -->
+            <div id="fashion-view" class="view-section">
+                <div class="fashion-layout">
+                    <!-- Column 1: 3D Viewport -->
+                    <div class="fashion-viewport-container">
+                        <div id="fashion-canvas-container">
+                            <canvas id="fashion-canvas"></canvas>
+                        </div>
+                        <div class="fashion-overlay-controls">
+                            <button class="icon-btn" onclick="resetFashionCamera()" title="Reiniciar Cámara">
+                                <i class="fa-solid fa-camera"></i>
+                            </button>
+                            <button class="icon-btn" id="btn-toggle-animation" onclick="toggleFashionAnimation()" title="Pausar/Reanudar Animación">
+                                <i class="fa-solid fa-pause"></i>
+                            </button>
+                            <button class="icon-btn" onclick="randomizeFashion()" title="Combinación Aleatoria">
+                                <i class="fa-solid fa-shuffle"></i>
+                            </button>
+                            <button class="icon-btn delete" onclick="clearFashion()" title="Quitar Todo">
+                                <i class="fa-solid fa-rotate-left"></i>
+                            </button>
+                        </div>
+                        <div class="fashion-loading-spinner" id="fashion-loading" style="display:none;">
+                            <i class="fa-solid fa-circle-notch fa-spin"></i> Cargando visualizador...
+                        </div>
+                    </div>
+
+                    <!-- Column 2: Controls & Options -->
+                    <div class="fashion-sidebar-panel glass-panel">
+                        <!-- Navigation Tabs inside panel -->
+                        <div class="fashion-tabs">
+                            <button class="fashion-tab-btn active" id="tab-btn-base" onclick="switchFashionTab('base')">
+                                <i class="fa-solid fa-user"></i> <span data-i18n="fashion_tab_base">Personaje</span>
+                            </button>
+                            <button class="fashion-tab-btn" id="tab-btn-items" onclick="switchFashionTab('items')">
+                                <i class="fa-solid fa-shirt"></i> <span data-i18n="fashion_tab_items">Ropa y Armas</span>
+                            </button>
+                            <button class="fashion-tab-btn" id="tab-btn-outfits" onclick="switchFashionTab('outfits')">
+                                <i class="fa-solid fa-heart"></i> <span data-i18n="fashion_tab_outfits">Outfits</span>
+                            </button>
+                        </div>
+
+                        <!-- Tab 1: Base Character Customization -->
+                        <div id="fashion-tab-content-base" class="fashion-tab-content active">
+                            <h3 data-i18n="fashion_section_base">Base del Personaje</h3>
+                            
+                            <div class="form-group">
+                                <label data-i18n="fashion_gender">Género</label>
+                                <div class="fashion-gender-selector">
+                                    <button class="btn-gender active" id="btn-gender-male" onclick="setFashionGender('male')">
+                                        <i class="fa-solid fa-mars"></i> <span data-i18n="fashion_gender_male">Masculino</span>
+                                    </button>
+                                    <button class="btn-gender" id="btn-gender-female" onclick="setFashionGender('female')">
+                                        <i class="fa-solid fa-venus"></i> <span data-i18n="fashion_gender_female">Femenino</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label data-i18n="fashion_hair_style">Estilo de Cabello</label>
+                                <select id="fashion-hair-style" onchange="updateFashionHairStyle(this.value)">
+                                    <option value="short" data-i18n="hair_short">Corto / Spiky</option>
+                                    <option value="long" data-i18n="hair_long">Largo / Fluyente</option>
+                                    <option value="twintails" data-i18n="hair_twintails">Doble Coleta (Twintails)</option>
+                                    <option value="ponytail" data-i18n="hair_ponytail">Coleta de Caballo (Ponytail)</option>
+                                    <option value="bald" data-i18n="hair_bald">Calvo</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label data-i18n="fashion_hair_color">Color de Cabello</label>
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <input type="color" id="fashion-hair-color" value="#ffd700" oninput="updateFashionHairColor(this.value)" style="width:50px; height:38px; border:1px solid var(--glass-border); border-radius:8px; background:none; cursor:pointer;">
+                                    <div class="fashion-color-presets">
+                                        <span class="color-dot" style="background:#ffd700;" onclick="setHairPresetColor('#ffd700')"></span>
+                                        <span class="color-dot" style="background:#ff4444;" onclick="setHairPresetColor('#ff4444')"></span>
+                                        <span class="color-dot" style="background:#4488ff;" onclick="setHairPresetColor('#4488ff')"></span>
+                                        <span class="color-dot" style="background:#ff44ff;" onclick="setHairPresetColor('#ff44ff')"></span>
+                                        <span class="color-dot" style="background:#ffffff;" onclick="setHairPresetColor('#ffffff')"></span>
+                                        <span class="color-dot" style="background:#222222;" onclick="setHairPresetColor('#222222')"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label data-i18n="fashion_skin_tone">Tono de Piel</label>
+                                <div class="fashion-skin-selector">
+                                    <button class="btn-skin active" style="background:#ffd5b4;" onclick="setFashionSkinColor('#ffd5b4', this)" title="Pálido"></button>
+                                    <button class="btn-skin" style="background:#e0a97f;" onclick="setFashionSkinColor('#e0a97f', this)" title="Bronceado"></button>
+                                    <button class="btn-skin" style="background:#8c5b3b;" onclick="setFashionSkinColor('#8c5b3b', this)" title="Oscuro"></button>
+                                    <button class="btn-skin" style="background:#a5d3f5;" onclick="setFashionSkinColor('#a5d3f5', this)" title="Fantasía Azul"></button>
+                                    <button class="btn-skin" style="background:#b3e6c3;" onclick="setFashionSkinColor('#b3e6c3', this)" title="Fantasía Verde"></button>
+                                </div>
+                            </div>
+
+                            <div class="form-group" style="margin-top:20px; border-top:1px solid rgba(255,255,255,0.05); padding-top:15px;">
+                                <label data-i18n="fashion_avatar_anim">Animación del Avatar</label>
+                                <select id="fashion-anim-type" onchange="updateFashionAnimationType(this.value)">
+                                    <option value="idle" data-i18n="anim_idle">Respiración (Idle)</option>
+                                    <option value="float" data-i18n="anim_float">Flotando en el Aire</option>
+                                    <option value="dance" data-i18n="anim_dance">Baile / Movimiento Rítmico</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Tab 2: Clothes & Equipment Customization -->
+                        <div id="fashion-tab-content-items" class="fashion-tab-content">
+                            <h3 data-i18n="fashion_section_equip">Objetos Equipables</h3>
+                            
+                            <div class="fashion-equip-row">
+                                <div class="form-group flex-grow">
+                                    <label data-i18n="fashion_slot_head">Cabeza (Gorro / Hat)</label>
+                                    <select id="fashion-equip-head" onchange="equipFashionItem('head', this.value)">
+                                        <option value="none" data-i18n="equip_none">Ninguno</option>
+                                        <option value="cat_ears" data-i18n="equip_cat_ears">Orejas de Gato</option>
+                                        <option value="halo" data-i18n="equip_halo">Halo Celestial (Glowing)</option>
+                                        <option value="wizard_hat" data-i18n="equip_wizard_hat">Gorro de Mago</option>
+                                        <option value="crown" data-i18n="equip_crown">Corona Real</option>
+                                        <option value="pirate_hat" data-i18n="equip_pirate_hat">Sombrero de Pirata</option>
+                                        <option value="ninja_mask" data-i18n="equip_ninja_mask">Máscara Ninja</option>
+                                    </select>
+                                </div>
+                                <button class="icon-btn-toggle-slot" onclick="toggleSlotVisibility('head')" id="btn-toggle-head" title="Ocultar/Mostrar">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+
+                            <div class="fashion-equip-row">
+                                <div class="form-group flex-grow">
+                                    <label data-i18n="fashion_slot_suit">Traje (Torso / Suit)</label>
+                                    <select id="fashion-equip-suit" onchange="equipFashionItem('suit', this.value)">
+                                        <option value="common" data-i18n="equip_suit_common">Ropa Común</option>
+                                        <option value="cyberpunk" data-i18n="equip_suit_cyberpunk">Traje Cyberpunk Neón</option>
+                                        <option value="maid" data-i18n="equip_suit_maid">Vestido de Maid</option>
+                                        <option value="dragon" data-i18n="equip_suit_dragon">Armadura de Dragón</option>
+                                        <option value="astronaut" data-i18n="equip_suit_astronaut">Traje de Astronauta</option>
+                                        <option value="school" data-i18n="equip_suit_school">Uniforme Escolar</option>
+                                    </select>
+                                </div>
+                                <button class="icon-btn-toggle-slot" onclick="toggleSlotVisibility('suit')" id="btn-toggle-suit" title="Ocultar/Mostrar">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+
+                            <div class="fashion-equip-row">
+                                <div class="form-group flex-grow">
+                                    <label data-i18n="fashion_slot_gloves">Guantes (Gloves)</label>
+                                    <select id="fashion-equip-gloves" onchange="equipFashionItem('gloves', this.value)">
+                                        <option value="default" data-i18n="equip_gloves_default">Guantes Comunes</option>
+                                        <option value="gold_bracers" data-i18n="equip_gloves_gold">Brazaletes de Oro</option>
+                                        <option value="boxing" data-i18n="equip_gloves_boxing">Guantes de Boxeo</option>
+                                        <option value="cyber_gloves" data-i18n="equip_gloves_cyber">Guantes Cyberpunk</option>
+                                    </select>
+                                </div>
+                                <button class="icon-btn-toggle-slot" onclick="toggleSlotVisibility('gloves')" id="btn-toggle-gloves" title="Ocultar/Mostrar">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+
+                            <div class="fashion-equip-row">
+                                <div class="form-group flex-grow">
+                                    <label data-i18n="fashion_slot_shoes">Calzado (Shoes)</label>
+                                    <select id="fashion-equip-shoes" onchange="equipFashionItem('shoes', this.value)">
+                                        <option value="common" data-i18n="equip_shoes_common">Zapatos Comunes</option>
+                                        <option value="metal_boots" data-i18n="equip_shoes_metal">Botas de Metal</option>
+                                        <option value="winged_boots" data-i18n="equip_shoes_winged">Botas Aladas</option>
+                                        <option value="sneakers" data-i18n="equip_shoes_sneakers">Zapatillas Deportivas</option>
+                                    </select>
+                                </div>
+                                <button class="icon-btn-toggle-slot" onclick="toggleSlotVisibility('shoes')" id="btn-toggle-shoes" title="Ocultar/Mostrar">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+
+                            <div class="fashion-equip-row">
+                                <div class="form-group flex-grow">
+                                    <label data-i18n="fashion_slot_cloak">Espalda (Capa / Cloak)</label>
+                                    <select id="fashion-equip-cloak" onchange="equipFashionItem('cloak', this.value)">
+                                        <option value="none" data-i18n="equip_none">Ninguna</option>
+                                        <option value="angel_wings" data-i18n="equip_wings_angel">Alas de Ángel (Flapping)</option>
+                                        <option value="demon_wings" data-i18n="equip_wings_demon">Alas de Demonio (Flapping)</option>
+                                        <option value="butterfly_wings" data-i18n="equip_wings_butterfly">Alas de Mariposa</option>
+                                        <option value="hero_cape" data-i18n="equip_cloak_hero">Capa de Héroe (Waving)</option>
+                                        <option value="jetpack" data-i18n="equip_cloak_jetpack">Mochila Cohete (Flickering)</option>
+                                    </select>
+                                </div>
+                                <button class="icon-btn-toggle-slot" onclick="toggleSlotVisibility('cloak')" id="btn-toggle-cloak" title="Ocultar/Mostrar">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+
+                            <div class="fashion-equip-row">
+                                <div class="form-group flex-grow">
+                                    <label data-i18n="fashion_slot_weapon">Arma (Weapon)</label>
+                                    <select id="fashion-equip-weapon" onchange="equipFashionItem('weapon', this.value)">
+                                        <option value="fists" data-i18n="equip_weapon_fists">Puños (Ninguna)</option>
+                                        <option value="laser_saber" data-i18n="equip_weapon_laser">Sable de Luz Neón (Glowing)</option>
+                                        <option value="wood_sword" data-i18n="equip_weapon_wood">Espada de Madera</option>
+                                        <option value="magic_wand" data-i18n="equip_weapon_wand">Vara de Mago Celestial</option>
+                                        <option value="dragon_bow" data-i18n="equip_weapon_bow">Arco de Dragón</option>
+                                        <option value="golden_axe" data-i18n="equip_weapon_axe">Hacha de Batalla Dorada</option>
+                                        <option value="royal_shield" data-i18n="equip_weapon_shield">Escudo Real (Mano Izquierda)</option>
+                                    </select>
+                                </div>
+                                <button class="icon-btn-toggle-slot" onclick="toggleSlotVisibility('weapon')" id="btn-toggle-weapon" title="Ocultar/Mostrar">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Tab 3: Outfits Presets & Saving -->
+                        <div id="fashion-tab-content-outfits" class="fashion-tab-content">
+                            <h3 data-i18n="fashion_section_presets">Conjuntos Rápidos (Presets)</h3>
+                            <div class="fashion-presets-grid">
+                                <button class="btn-preset" onclick="loadFashionPreset('angel')">
+                                    <i class="fa-solid fa-wand-magic-sparkles"></i> <span data-i18n="preset_angel">Ángel Celestia</span>
+                                </button>
+                                <button class="btn-preset" onclick="loadFashionPreset('cyberpunk')">
+                                    <i class="fa-solid fa-bolt"></i> <span data-i18n="preset_cyberpunk">Cyberpunk Neón</span>
+                                </button>
+                                <button class="btn-preset" onclick="loadFashionPreset('dragon')">
+                                    <i class="fa-solid fa-fire"></i> <span data-i18n="preset_dragon">Guerrero Dragón</span>
+                                </button>
+                                <button class="btn-preset" onclick="loadFashionPreset('maid')">
+                                    <i class="fa-solid fa-venus-mars"></i> <span data-i18n="preset_maid">Sirvienta Gótica</span>
+                                </button>
+                                <button class="btn-preset" onclick="loadFashionPreset('astronaut')">
+                                    <i class="fa-solid fa-user-astronaut"></i> <span data-i18n="preset_astronaut">Astronauta Vacío</span>
+                                </button>
+                            </div>
+
+                            <hr style="border:0; border-top:1px solid rgba(255,255,255,0.08); margin: 20px 0;">
+
+                            <h3 data-i18n="fashion_section_save">Guardar Outfit Personalizado</h3>
+                            <div style="display:flex; gap:10px; margin-bottom:15px;">
+                                <input type="text" id="outfit-name-input" data-i18n="outfit_name_placeholder" placeholder="Nombre de mi outfit..." style="flex:1;">
+                                <button class="btn-primary" onclick="saveCustomOutfit()" style="padding: 0 15px;">
+                                    <i class="fa-solid fa-floppy-disk"></i> <span data-i18n="btn_save">Guardar</span>
+                                </button>
+                            </div>
+
+                            <h3 data-i18n="fashion_section_saved">Mis Conjuntos Guardados</h3>
+                            <div id="saved-outfits-list" class="saved-outfits-list">
+                                <!-- Saved outfits will populate here dynamically -->
+                                <p style="text-align:center; opacity:0.5; font-size:0.9rem; padding: 20px 0;" data-i18n="outfits_empty">No tienes outfits guardados aún.</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -387,6 +646,30 @@
             </div>
 
             <div class="card-grid" id="vd-characters-grid">
+                <!-- Character cards interpolated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Account Details Modal -->
+    <div id="account-details-modal" class="modal">
+        <div class="modal-content glass-panel" style="max-width:900px; width:95%;">
+            <span class="close" onclick="closeAccountDetailsModal()">&times;</span>
+            <header style="margin-bottom:1.5rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:15px;">
+                <h2 id="ad-title" style="word-break:break-all; margin-bottom: 10px;">Account Email</h2>
+                <div id="ad-credentials" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                    <!-- Credentials injected here -->
+                </div>
+            </header>
+
+            <div style="margin-bottom:1rem; display:flex; justify-content:space-between; align-items:center;">
+                <h3>Personajes Relacionados</h3>
+                <button class="btn-primary" id="ad-add-char-btn">
+                    <i class="fa-solid fa-user-plus"></i> Añadir Personaje
+                </button>
+            </div>
+
+            <div class="card-grid" id="ad-characters-grid">
                 <!-- Character cards interpolated here -->
             </div>
         </div>
@@ -557,7 +840,12 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DDSLoader.js"></script>
     <script src="app.js"></script>
+    <script src="fashion.js"></script>
 </body>
-
 </html>

@@ -316,6 +316,8 @@ function switchView(view) {
     if (view === 'accounts') {
         accountsView.classList.add('active');
         pageTitle.innerHTML = `${i18n('page_title_accounts')} <span id="account-count" style="font-size:1rem; opacity:0.7; font-weight:400;">(${accounts.length})</span>`;
+        const searchInput = document.getElementById('account-search-input');
+        if (searchInput) searchInput.value = '';
         fetchAccounts();
     } else if (view === 'characters') {
         charactersView.classList.add('active');
@@ -473,18 +475,25 @@ function renderAccounts() {
     const countEl = document.getElementById('account-count');
     if (countEl) countEl.innerText = `(${accounts.length})`;
 
+    const searchVal = document.getElementById('account-search-input')?.value.toLowerCase().trim() || '';
+
+    let filteredAccounts = [...accounts];
+    if (searchVal) {
+        filteredAccounts = filteredAccounts.filter(acc => (acc.email || '').toLowerCase().includes(searchVal));
+    }
+
     const grid = document.getElementById('accounts-grid');
-    grid.innerHTML = accounts.map(acc => {
+    grid.innerHTML = filteredAccounts.map(acc => {
         const isSelected = selectedAccountIds.has(acc.id);
         const borderStyle = isSelected ? 'border: 1px solid var(--primary);' : '';
 
         return `
-        <div class="card" style="${borderStyle}">
+        <div class="card" style="${borderStyle}; cursor:pointer;" onclick="openAccountDetailsModal(${acc.id})">
             <div class="card-bar" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:0.8rem; margin-bottom:0.8rem; border-bottom:1px solid rgba(255,255,255,0.05);">
                 <div onclick="event.stopPropagation()">
                     <input type="checkbox" onchange="toggleAccountSelection(${acc.id})" ${isSelected ? 'checked' : ''} style="width:18px; height:18px; cursor:pointer; accent-color:var(--primary);">
                 </div>
-                <div class="card-actions" style="opacity:1;">
+                <div class="card-actions" style="opacity:1;" onclick="event.stopPropagation()">
                     <button class="icon-btn" onclick="openModal('account', ${acc.id})"><i class="fa-solid fa-pen"></i></button>
                     <button class="icon-btn delete" onclick="deleteItem('accounts', ${acc.id})"><i class="fa-solid fa-trash"></i></button>
                 </div>
@@ -496,7 +505,7 @@ function renderAccounts() {
             </div>
             <div class="card-content">
                 <p>${i18n('field_id')} <span class="value">#${acc.id}</span></p>
-                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:15px;">
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:15px;" onclick="event.stopPropagation()">
                     <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountEmail(${acc.id})" title="${i18n('action_copy_email')}"><i class="fa-solid fa-envelope"></i> Email</button>
                     <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountPassword(${acc.id})" title="${i18n('action_copy_pass')}"><i class="fa-solid fa-key"></i> Pass</button>
                     <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountPin(${acc.id})" title="${i18n('action_copy_pin')}"><i class="fa-solid fa-lock"></i> PIN</button>
@@ -2488,3 +2497,125 @@ document.addEventListener('DOMContentLoaded', () => {
     loadContadores();
     startTimerEngine();
 });
+
+// ---------------------------------------------------------
+// Account Details Modal Functions
+// ---------------------------------------------------------
+let accountModalPasswordVisible = {};
+let accountModalPinVisible = {};
+
+function openAccountDetailsModal(accountId) {
+    prefillAccountId = accountId;
+    const acc = accounts.find(a => a.id == accountId);
+    if (!acc) return;
+
+    const accChars = characters.filter(c => c.account_id == accountId);
+
+    document.getElementById('ad-title').innerText = acc.email;
+    
+    // Set the click event for the add character button
+    const addCharBtn = document.getElementById('ad-add-char-btn');
+    if (addCharBtn) {
+        addCharBtn.onclick = () => {
+            closeAccountDetailsModal();
+            prefillAccountId = accountId;
+            openModal('character');
+        };
+    }
+
+    // Render credentials with visibility toggle
+    renderAccountModalCredentials(acc);
+
+    const grid = document.getElementById('ad-characters-grid');
+    grid.innerHTML = accChars.map(char => {
+        const charType = char.char_type || 'Unknown';
+        const charTypeLower = charType.toLowerCase ? charType.toLowerCase() : 'unknown';
+        return `
+        <div class="card">
+            <div class="card-bar" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:0.8rem; margin-bottom:0.8rem; border-bottom:1px solid rgba(255,255,255,0.05);">
+                <button class="icon-btn favorite ${char.is_favorite ? 'active' : ''}" 
+                        onclick="toggleFavoriteFromAccountDetails(${char.id}, ${accountId})" 
+                        title="Toggle Favorite"
+                        style="color: ${char.is_favorite ? '#fbbf24' : 'rgba(255,255,255,0.3)'};">
+                    <i class="fa-${char.is_favorite ? 'solid' : 'regular'} fa-star"></i>
+                </button>
+                <div class="card-actions" style="opacity:1;">
+                    <button class="icon-btn" onclick="closeAccountDetailsModal(); openModal('character', ${char.id})" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                    <button class="icon-btn delete" onclick="deleteCharacterFromAccountDetails(${char.id}, ${accountId})" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            </div>
+            <div class="card-header" style="padding-top:0; margin-bottom:0.5rem;">
+                <div class="card-title" style="word-break:break-all;">${char.name || 'Unnamed'}</div>
+            </div>
+            <div class="card-content">
+                <p>${i18n('field_level')} <span class="value">${char.level || 0}</span></p>
+                <p>${i18n('field_class')} <span class="value">${char.class_name || 'None'}</span></p>
+                <p>${i18n('settings_char_types')} <span class="badge badge-${charTypeLower}">${charType}</span></p>
+                <div class="recommended-spot">
+                    <i class="fa-solid fa-map-location-dot"></i> <span>${getRecommendedZone(char.level)}</span>
+                </div>
+            </div>
+        </div>
+    `}).join('') || `<p style="opacity:0.6; font-style:italic; padding:10px;">No characters associated with this account.</p>`;
+
+    document.getElementById('account-details-modal').classList.add('show');
+}
+
+function closeAccountDetailsModal() {
+    document.getElementById('account-details-modal').classList.remove('show');
+}
+
+function renderAccountModalCredentials(acc) {
+    const isPassVisible = accountModalPasswordVisible[acc.id] || false;
+    const isPinVisible = accountModalPinVisible[acc.id] || false;
+
+    const passVal = isPassVisible ? (acc.password || 'No Password') : '******';
+    const pinVal = isPinVisible ? (acc.pin || 'N/A') : '****';
+
+    document.getElementById('ad-credentials').innerHTML = `
+        <div style="display:flex; align-items:center; gap:8px; background:rgba(0,0,0,0.2); padding:6px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+            <span style="opacity:0.6; font-size:0.8rem;">Email:</span>
+            <span style="font-weight:bold; font-size:0.9rem;">${acc.email}</span>
+            <button class="icon-btn" onclick="copyAccountEmail(${acc.id})" title="${i18n('action_copy_email')}" style="padding:2px 6px;"><i class="fa-solid fa-envelope"></i></button>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; background:rgba(0,0,0,0.2); padding:6px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+            <span style="opacity:0.6; font-size:0.8rem;">Pass:</span>
+            <span style="font-weight:bold; font-size:0.9rem; font-family:monospace;">${passVal}</span>
+            <button class="icon-btn" onclick="toggleAccountModalPassword(${acc.id})" title="${isPassVisible ? 'Hide' : 'Show'}" style="padding:2px 6px;"><i class="fa-solid ${isPassVisible ? 'fa-eye-slash' : 'fa-eye'}"></i></button>
+            <button class="icon-btn" onclick="copyAccountPassword(${acc.id})" title="${i18n('action_copy_pass')}" style="padding:2px 6px;"><i class="fa-solid fa-key"></i></button>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; background:rgba(0,0,0,0.2); padding:6px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+            <span style="opacity:0.6; font-size:0.8rem;">PIN:</span>
+            <span style="font-weight:bold; font-size:0.9rem; font-family:monospace;">${pinVal}</span>
+            <button class="icon-btn" onclick="toggleAccountModalPin(${acc.id})" title="${isPinVisible ? 'Hide' : 'Show'}" style="padding:2px 6px;"><i class="fa-solid ${isPinVisible ? 'fa-eye-slash' : 'fa-eye'}"></i></button>
+            <button class="icon-btn" onclick="copyAccountPin(${acc.id})" title="${i18n('action_copy_pin')}" style="padding:2px 6px;"><i class="fa-solid fa-lock"></i></button>
+        </div>
+        <button class="btn-autologin" onclick="triggerAutoLogin(${acc.id})" title="Auto-Login (UAC)" style="padding:6px 12px; border-radius:8px;"><i class="fa-solid fa-keyboard"></i> Auto-Login</button>
+    `;
+}
+
+function toggleAccountModalPassword(accountId) {
+    accountModalPasswordVisible[accountId] = !accountModalPasswordVisible[accountId];
+    const acc = accounts.find(a => a.id == accountId);
+    if (acc) renderAccountModalCredentials(acc);
+}
+
+function toggleAccountModalPin(accountId) {
+    accountModalPinVisible[accountId] = !accountModalPinVisible[accountId];
+    const acc = accounts.find(a => a.id == accountId);
+    if (acc) renderAccountModalCredentials(acc);
+}
+
+async function deleteCharacterFromAccountDetails(charId, accountId) {
+    if (!confirm(i18n('msg_confirm_delete'))) return;
+    try {
+        await fetch(`${API_URL}/characters/${charId}`, { method: 'DELETE' });
+        await fetchCharacters();
+        openAccountDetailsModal(accountId);
+    } catch (e) { console.error(e); }
+}
+
+async function toggleFavoriteFromAccountDetails(charId, accountId) {
+    await toggleFavorite(charId);
+    openAccountDetailsModal(accountId);
+}

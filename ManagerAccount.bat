@@ -52,24 +52,16 @@ if not exist "backend\venv" (
 
 :: 3. Iniciar aplicacion
 echo.
-echo [*] Iniciando el servidor...
+:: Cerrar instancia previa si existe en el puerto 5000
+powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 5000 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }" >nul 2>&1
+
+echo [*] Iniciando el servidor en segundo plano...
 cd backend
 call venv\Scripts\activate.bat
-
-echo.
-echo ==========================================================
-echo       EL SERVIDOR SE ESTA EJECUTANDO (NO CIERRES ESTO)
-echo ==========================================================
-echo   Aperturando la interfaz en tu navegador predeterminado...
-echo   Para apagar el servidor presiona Ctrl + C
-echo ==========================================================
-echo.
 
 :: Lanzar navegador
 start "" http://localhost:5000
 
-:: Iniciar aplicacion
-python run.py
-
-pause
-exit /b
+:: Iniciar aplicacion en segundo plano
+start "" pythonw run.py
+exit
