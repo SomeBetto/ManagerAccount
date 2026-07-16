@@ -10,7 +10,8 @@ def create_account():
         new_account = {
             'email': data['email'],
             'password': data['password'],
-            'pin': data.get('pin')
+            'pin': data.get('pin'),
+            'otp_token': data.get('otp_token')
         }
         inserted = ExcelDB.insert('accounts', new_account)
         return jsonify(inserted), 201
@@ -41,6 +42,7 @@ def update_account(id):
         if 'email' in data: update_data['email'] = data['email']
         if 'password' in data: update_data['password'] = data['password']
         if 'pin' in data: update_data['pin'] = data['pin']
+        if 'otp_token' in data: update_data['otp_token'] = data['otp_token']
         
         updated = ExcelDB.update('accounts', id, update_data)
         return jsonify(updated)

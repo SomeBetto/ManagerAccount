@@ -65,6 +65,7 @@ const translations = {
         field_id: "ID",
         field_pin: "PIN",
         field_pass: "Pass",
+        field_otp: "OTP Token",
         field_class: "Class",
         field_level: "Level",
         field_owner: "Owner",
@@ -75,8 +76,10 @@ const translations = {
         action_copy_email: "Copy Email",
         action_copy_pin: "Copy PIN",
         action_copy_pass: "Copy Pass",
+        action_copy_otp: "Copy OTP Token",
         action_toggle_pin: "Toggle PIN",
         action_toggle_pass: "Toggle Pass",
+        action_toggle_otp: "Toggle OTP Token",
         action_redeem_here: "Click to Redeem Here",
         action_history: "Redemption History",
         // Vacantes
@@ -103,7 +106,8 @@ const translations = {
         msg_save_config_success: "Settings saved. Page will reload.",
         coupon_skip_help: "If you don't want to redeem this coupon for any character in this account, you can skip it.",
         coupon_delete_confirm: "Delete this coupon? Redemption history will remain but the coupon selection will be removed from the list.",
-        msg_fetch_error: "Error loading data from server."
+        msg_fetch_error: "Error loading data from server.",
+        btn_edit_account: "Edit Account"
     },
     es: {
         // Sidebar
@@ -162,6 +166,7 @@ const translations = {
         field_id: "ID",
         field_pin: "PIN",
         field_pass: "Contraseña",
+        field_otp: "OTP Token",
         field_class: "Clase",
         field_level: "Nivel",
         field_owner: "Dueño",
@@ -172,8 +177,10 @@ const translations = {
         action_copy_email: "Copiar Correo",
         action_copy_pin: "Copiar PIN",
         action_copy_pass: "Copiar Contraseña",
+        action_copy_otp: "Copiar OTP Token",
         action_toggle_pin: "Ver/Ocultar PIN",
         action_toggle_pass: "Ver/Ocultar Contraseña",
+        action_toggle_otp: "Ver/Ocultar OTP Token",
         action_redeem_here: "Clic para Canjear Aquí",
         action_history: "Historial de Canje",
         // Vacantes
@@ -200,7 +207,8 @@ const translations = {
         msg_save_config_success: "Configuración guardada. La página se recargará.",
         coupon_skip_help: "Si no quieres canjear este cupón para ningún personaje de esta cuenta, puedes omitirlo.",
         coupon_delete_confirm: "¿Eliminar este cupón? El histórico de canjes se mantendrá, pero el cupón ya no aparecerá en la lista para nuevos canjes.",
-        msg_fetch_error: "Error al cargar datos del servidor."
+        msg_fetch_error: "Error al cargar datos del servidor.",
+        btn_edit_account: "Editar Cuenta"
     }
 };
 
@@ -317,7 +325,10 @@ function switchView(view) {
         accountsView.classList.add('active');
         pageTitle.innerHTML = `${i18n('page_title_accounts')} <span id="account-count" style="font-size:1rem; opacity:0.7; font-weight:400;">(${accounts.length})</span>`;
         const searchInput = document.getElementById('account-search-input');
-        if (searchInput) searchInput.value = '';
+        if (searchInput) {
+            searchInput.value = '';
+            checkSearchClearButton('account-search-input');
+        }
         fetchAccounts();
     } else if (view === 'characters') {
         charactersView.classList.add('active');
@@ -509,6 +520,9 @@ function renderAccounts() {
                     <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountEmail(${acc.id})" title="${i18n('action_copy_email')}"><i class="fa-solid fa-envelope"></i> Email</button>
                     <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountPassword(${acc.id})" title="${i18n('action_copy_pass')}"><i class="fa-solid fa-key"></i> Pass</button>
                     <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountPin(${acc.id})" title="${i18n('action_copy_pin')}"><i class="fa-solid fa-lock"></i> PIN</button>
+                    ${acc.otp_token ? `
+                    <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountOtp(${acc.id})" title="${i18n('action_copy_otp')}"><i class="fa-solid fa-shield-halved"></i> OTP</button>
+                    ` : ''}
                     <button class="btn-autologin" onclick="triggerAutoLogin(${acc.id})" title="Auto-Login (UAC)"><i class="fa-solid fa-keyboard"></i> Auto-Login</button>
                 </div>
             </div>
@@ -828,7 +842,7 @@ function renderCharactersHTML(list, targetGridId = 'characters-grid') {
                         </div>
                     </div>
                     <div class="card-header" style="padding-top:0; margin-bottom:0.5rem;">
-                        <div class="card-title" style="word-break:break-all;">${char.name || 'Unnamed'}</div>
+                        <div class="card-title clickable" style="word-break:break-all;" onclick="openAccountDetailsModal(${char.account_id})">${char.name || 'Unnamed'}</div>
                     </div>
                     <div class="card-content">
                         <p>${i18n('field_level')} <span class="value">${char.level || 0}</span></p>
@@ -842,6 +856,7 @@ function renderCharactersHTML(list, targetGridId = 'characters-grid') {
                             <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyToClipboard('${getAccountEmail(char.account_id)}')" title="${i18n('action_copy_email')}"><i class="fa-solid fa-envelope"></i> Email</button>
                             <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyCharacterPassword(${char.id})" title="${i18n('action_copy_pass')}"><i class="fa-solid fa-key"></i> Pass</button>
                             <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountPin(${char.account_id})" title="${i18n('action_copy_pin')}"><i class="fa-solid fa-lock"></i> PIN</button>
+                            <button class="btn-autologin" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="triggerAutoLogin(${char.account_id})" title="Auto-Login (UAC)"><i class="fa-solid fa-keyboard"></i> Auto-Login</button>
                         </div>
                     </div>
                 </div>
@@ -929,6 +944,7 @@ function openPreFilledCharacterModal() {
 let editingId = null;
 let editingType = null;
 let prefillAccountId = null;
+let lastOpenAccountId = null;
 
 async function openModal(type = null, id = null) {
     if (!type) {
@@ -960,6 +976,10 @@ async function openModal(type = null, id = null) {
             <div class="form-group">
                 <label>${i18n('field_pin')}</label>
                 <input type="text" name="pin" value="${data.pin || ''}">
+            </div>
+            <div class="form-group">
+                <label>${i18n('field_otp')}</label>
+                <input type="text" name="otp_token" value="${data.otp_token || ''}">
             </div>
         `;
     } else if (type === 'character') {
@@ -1090,9 +1110,16 @@ async function submitForm() {
 
         if (res.ok) {
             closeModal();
-            if (currentView === 'accounts') fetchAccounts();
-            else if (currentView === 'items') fetchItems();
-            else fetchCharacters();
+            if (editingType === 'character' && lastOpenAccountId) {
+                fetchCharacters().then(() => {
+                    openAccountDetailsModal(lastOpenAccountId);
+                    lastOpenAccountId = null;
+                });
+            } else {
+                if (currentView === 'accounts') fetchAccounts();
+                else if (currentView === 'items') fetchItems();
+                else fetchCharacters();
+            }
         } else {
             const err = await res.json();
             alert(i18n('msg_error') + ': ' + err.error);
@@ -1125,6 +1152,9 @@ function openCharInfoModal(charId) {
         <button class="btn-secondary" onclick="copyAccountEmail(${acc.id})"><i class="fa-solid fa-envelope"></i> Email</button>
         <button class="btn-secondary" onclick="copyAccountPassword(${acc.id})"><i class="fa-solid fa-key"></i> Pass</button>
         <button class="btn-secondary" onclick="copyAccountPin(${acc.id})"><i class="fa-solid fa-lock"></i> PIN</button>
+        ${acc.otp_token ? `
+        <button class="btn-secondary" onclick="copyAccountOtp(${acc.id})"><i class="fa-solid fa-shield-halved"></i> OTP</button>
+        ` : ''}
     `;
     document.getElementById('char-info-modal').classList.add('show');
 }
@@ -1150,6 +1180,11 @@ function copyAccountPassword(id) {
 function copyAccountPin(id) {
     const acc = accounts.find(a => a.id === id);
     if (acc) copyToClipboard(acc.pin);
+}
+
+function copyAccountOtp(id) {
+    const acc = accounts.find(a => a.id === id);
+    if (acc) copyToClipboard(acc.otp_token);
 }
 
 function copyCharacterPassword(id) {
@@ -1832,6 +1867,11 @@ function selectAccountForRedemption(accountId) {
                     <i class="fa-solid fa-shield"></i> <span>••••</span> <i class="fa-solid fa-copy" style="opacity:0.5; font-size:0.8rem;" title="${i18n('action_copy_pin')}"></i>
                 </div>
                 ` : ''}
+                ${acc.otp_token ? `
+                <div class="credential-pill" onclick="copyText('${acc.otp_token}', event)">
+                    <i class="fa-solid fa-shield-halved"></i> <span>••••••</span> <i class="fa-solid fa-copy" style="opacity:0.5; font-size:0.8rem;" title="${i18n('action_copy_otp')}"></i>
+                </div>
+                ` : ''}
             </div>
         </div>
     `;
@@ -2058,7 +2098,7 @@ async function launchSelectedAccounts() {
 }
 
 let isCompact = false;
-let compactCycles = {}; // Stores { accountId: 'email' | 'password' | 'pin' }
+let compactCycles = {}; // Stores { accountId: 'email' | 'password' | 'pin' | 'otp' }
 
 async function toggleCompactMode() {
     isCompact = !isCompact;
@@ -2114,6 +2154,7 @@ function renderCompactList() {
         let buttonText = 'Copiar Email';
         if (currentState === 'password') buttonText = 'Copiar Contraseña';
         if (currentState === 'pin') buttonText = `PIN: ${acc.pin || 'N/A'}`;
+        if (currentState === 'otp') buttonText = `OTP: ${acc.otp_token || 'N/A'}`;
         
         return `
             <div class="compact-card" id="compact-card-${acc.id}">
@@ -2166,6 +2207,12 @@ function cycleCredentials(accountId) {
         }
     } else if (currentState === 'pin') {
         if (acc.pin) copyToClipboard(acc.pin);
+        compactCycles[accountId] = 'otp';
+        if (btn) {
+            btn.innerText = `OTP: ${acc.otp_token || 'N/A'}`;
+        }
+    } else if (currentState === 'otp') {
+        if (acc.otp_token) copyToClipboard(acc.otp_token);
         compactCycles[accountId] = 'email';
         if (btn) btn.innerText = 'Copiar Email';
     }
@@ -2501,10 +2548,8 @@ document.addEventListener('DOMContentLoaded', () => {
 // ---------------------------------------------------------
 // Account Details Modal Functions
 // ---------------------------------------------------------
-let accountModalPasswordVisible = {};
-let accountModalPinVisible = {};
-
 function openAccountDetailsModal(accountId) {
+    lastOpenAccountId = accountId;
     prefillAccountId = accountId;
     const acc = accounts.find(a => a.id == accountId);
     if (!acc) return;
@@ -2517,9 +2562,19 @@ function openAccountDetailsModal(accountId) {
     const addCharBtn = document.getElementById('ad-add-char-btn');
     if (addCharBtn) {
         addCharBtn.onclick = () => {
+            lastOpenAccountId = accountId;
             closeAccountDetailsModal();
             prefillAccountId = accountId;
             openModal('character');
+        };
+    }
+
+    // Set the click event for the edit account button
+    const editAccBtn = document.getElementById('ad-edit-acc-btn');
+    if (editAccBtn) {
+        editAccBtn.onclick = () => {
+            closeAccountDetailsModal();
+            openModal('account', accountId);
         };
     }
 
@@ -2540,7 +2595,7 @@ function openAccountDetailsModal(accountId) {
                     <i class="fa-${char.is_favorite ? 'solid' : 'regular'} fa-star"></i>
                 </button>
                 <div class="card-actions" style="opacity:1;">
-                    <button class="icon-btn" onclick="closeAccountDetailsModal(); openModal('character', ${char.id})" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                    <button class="icon-btn" onclick="lastOpenAccountId = ${accountId}; closeAccountDetailsModal(); openModal('character', ${char.id})" title="Edit"><i class="fa-solid fa-pen"></i></button>
                     <button class="icon-btn delete" onclick="deleteCharacterFromAccountDetails(${char.id}, ${accountId})" title="Delete"><i class="fa-solid fa-trash"></i></button>
                 </div>
             </div>
@@ -2566,12 +2621,6 @@ function closeAccountDetailsModal() {
 }
 
 function renderAccountModalCredentials(acc) {
-    const isPassVisible = accountModalPasswordVisible[acc.id] || false;
-    const isPinVisible = accountModalPinVisible[acc.id] || false;
-
-    const passVal = isPassVisible ? (acc.password || 'No Password') : '******';
-    const pinVal = isPinVisible ? (acc.pin || 'N/A') : '****';
-
     document.getElementById('ad-credentials').innerHTML = `
         <div style="display:flex; align-items:center; gap:8px; background:rgba(0,0,0,0.2); padding:6px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
             <span style="opacity:0.6; font-size:0.8rem;">Email:</span>
@@ -2580,30 +2629,46 @@ function renderAccountModalCredentials(acc) {
         </div>
         <div style="display:flex; align-items:center; gap:8px; background:rgba(0,0,0,0.2); padding:6px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
             <span style="opacity:0.6; font-size:0.8rem;">Pass:</span>
-            <span style="font-weight:bold; font-size:0.9rem; font-family:monospace;">${passVal}</span>
-            <button class="icon-btn" onclick="toggleAccountModalPassword(${acc.id})" title="${isPassVisible ? 'Hide' : 'Show'}" style="padding:2px 6px;"><i class="fa-solid ${isPassVisible ? 'fa-eye-slash' : 'fa-eye'}"></i></button>
+            <span style="font-weight:bold; font-size:0.9rem; font-family:monospace;">******</span>
             <button class="icon-btn" onclick="copyAccountPassword(${acc.id})" title="${i18n('action_copy_pass')}" style="padding:2px 6px;"><i class="fa-solid fa-key"></i></button>
         </div>
         <div style="display:flex; align-items:center; gap:8px; background:rgba(0,0,0,0.2); padding:6px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
             <span style="opacity:0.6; font-size:0.8rem;">PIN:</span>
-            <span style="font-weight:bold; font-size:0.9rem; font-family:monospace;">${pinVal}</span>
-            <button class="icon-btn" onclick="toggleAccountModalPin(${acc.id})" title="${isPinVisible ? 'Hide' : 'Show'}" style="padding:2px 6px;"><i class="fa-solid ${isPinVisible ? 'fa-eye-slash' : 'fa-eye'}"></i></button>
+            <span style="font-weight:bold; font-size:0.9rem; font-family:monospace;">****</span>
             <button class="icon-btn" onclick="copyAccountPin(${acc.id})" title="${i18n('action_copy_pin')}" style="padding:2px 6px;"><i class="fa-solid fa-lock"></i></button>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; background:rgba(0,0,0,0.2); padding:6px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+            <span style="opacity:0.6; font-size:0.8rem;">OTP:</span>
+            <span style="font-weight:bold; font-size:0.9rem; font-family:monospace;">******</span>
+            <button class="icon-btn" onclick="copyAccountOtp(${acc.id})" title="${i18n('action_copy_otp')}" style="padding:2px 6px;"><i class="fa-solid fa-shield-halved"></i></button>
         </div>
         <button class="btn-autologin" onclick="triggerAutoLogin(${acc.id})" title="Auto-Login (UAC)" style="padding:6px 12px; border-radius:8px;"><i class="fa-solid fa-keyboard"></i> Auto-Login</button>
     `;
 }
 
-function toggleAccountModalPassword(accountId) {
-    accountModalPasswordVisible[accountId] = !accountModalPasswordVisible[accountId];
-    const acc = accounts.find(a => a.id == accountId);
-    if (acc) renderAccountModalCredentials(acc);
+// ---------------------------------------------------------
+// Search Clear Buttons
+// ---------------------------------------------------------
+function clearSearchInput(inputId, callback) {
+    const input = document.getElementById(inputId);
+    if (input) {
+        input.value = '';
+        const clearBtn = input.nextElementSibling;
+        if (clearBtn && clearBtn.classList.contains('clear-search-btn')) {
+            clearBtn.style.display = 'none';
+        }
+        callback();
+    }
 }
 
-function toggleAccountModalPin(accountId) {
-    accountModalPinVisible[accountId] = !accountModalPinVisible[accountId];
-    const acc = accounts.find(a => a.id == accountId);
-    if (acc) renderAccountModalCredentials(acc);
+function checkSearchClearButton(inputId) {
+    const input = document.getElementById(inputId);
+    if (input) {
+        const clearBtn = input.nextElementSibling;
+        if (clearBtn && clearBtn.classList.contains('clear-search-btn')) {
+            clearBtn.style.display = input.value ? 'inline-flex' : 'none';
+        }
+    }
 }
 
 async function deleteCharacterFromAccountDetails(charId, accountId) {

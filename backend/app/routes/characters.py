@@ -24,14 +24,15 @@ def upload_accounts_csv():
         added_count = 0
         for row in csv_input:
             if not row: continue
-            if len(row) < 2: continue # Expect email, password, [pin]
+            if len(row) < 2: continue # Expect email, password, [pin], [otp_token]
 
             email = row[0].strip()
             password = row[1].strip()
-            pin = row[2].strip() if len(row) > 2 else None
+            pin = row[2].strip() if len(row) > 2 and row[2].strip() else None
+            otp_token = row[3].strip() if len(row) > 3 and row[3].strip() else None
 
             if email not in existing_emails:
-                new_acc = {'email': email, 'password': password, 'pin': pin}
+                new_acc = {'email': email, 'password': password, 'pin': pin, 'otp_token': otp_token}
                 ExcelDB.insert('accounts', new_acc)
                 existing_emails[email] = new_acc # Add to tracking to prevent dups in same csv
                 added_count += 1

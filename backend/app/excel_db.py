@@ -5,7 +5,7 @@ import json
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.json')
 
 SCHEMA = {
-    'accounts': ['id', 'email', 'password', 'pin'],
+    'accounts': ['id', 'email', 'password', 'pin', 'otp_token'],
     'characters': ['id', 'account_id', 'name', 'password', 'level', 'class_name', 'char_type', 'is_favorite'],
     'items': ['id', 'character_id', 'name', 'item_type', 'description'],
     'level_entries': ['id', 'character_id', 'priority', 'note'],
@@ -21,6 +21,7 @@ HEADER_ALIASES = {
     'email': ['email', 'correo', 'cuenta', 'account', 'acc', 'usuario', 'user'],
     'password': ['password', 'contraseña', 'contrasena', 'contrasea', 'pass', 'clave', 'pw'],
     'pin': ['pin', 'segunda clave', 'bank pin', 'pin2'],
+    'otp_token': ['otp_token', 'otp', 'token_otp', 'otp token', 'token otp', 'second_factor', 'otp_code'],
     'account_id': ['account_id', 'id_cuenta', 'cuenta_id', 'acc_id', 'account'],
     'name': ['name', 'nombre', 'personaje', 'char_name', 'char name', 'character', 'pjs', 'pj'],
     'level': ['level', 'nivel', 'lvl', 'lv'],

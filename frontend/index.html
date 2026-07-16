@@ -100,8 +100,11 @@
             <div id="accounts-view" class="view-section active">
                 <div class="filter-bar" style="margin-bottom: 1.5rem;">
                     <div class="filter-group">
-                        <input type="text" id="account-search-input" placeholder="Buscar cuenta por correo..." oninput="renderAccounts()"
-                            style="padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.05); color: white; width: 100%; max-width: 400px; outline: none;">
+                        <div class="search-input-wrapper" style="width: 100%; max-width: 400px; position: relative; display: inline-flex; align-items: center;">
+                            <input type="text" id="account-search-input" placeholder="Buscar cuenta por correo..." oninput="checkSearchClearButton('account-search-input'); renderAccounts();"
+                                style="padding: 0.5rem 2.5rem 0.5rem 1rem; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.05); color: white; width: 100%; outline: none;">
+                            <span class="clear-search-btn" onclick="clearSearchInput('account-search-input', renderAccounts)" style="position: absolute; right: 10px; cursor: pointer; color: rgba(255,255,255,0.4); display: none; font-size: 0.9rem; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%;"><i class="fa-solid fa-xmark"></i></span>
+                        </div>
                     </div>
                 </div>
                 <div class="card-grid" id="accounts-grid">
@@ -143,8 +146,11 @@
                             <option value="Psykeeper">Psykeeper</option>
                             <option value="Elementor">Elementor</option>
                         </select>
-                        <input type="text" id="name-filter" placeholder="Search Name..." oninput="renderCharacters()"
-                            style="padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.05); color: white; width: 150px;">
+                        <div class="search-input-wrapper" style="width: 150px; position: relative; display: inline-flex; align-items: center;">
+                            <input type="text" id="name-filter" placeholder="Search Name..." oninput="checkSearchClearButton('name-filter'); renderCharacters();"
+                                style="padding: 0.5rem 2rem 0.5rem 0.5rem; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.05); color: white; width: 100%; outline: none;">
+                            <span class="clear-search-btn" onclick="clearSearchInput('name-filter', renderCharacters)" style="position: absolute; right: 8px; cursor: pointer; color: rgba(255,255,255,0.4); display: none; font-size: 0.8rem; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%;"><i class="fa-solid fa-xmark"></i></span>
+                        </div>
                         <input type="number" id="level-filter" placeholder="Target Level" oninput="renderCharacters()"
                             style="padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.05); color: white; width: 120px;">
                     </div>
@@ -656,7 +662,12 @@
         <div class="modal-content glass-panel" style="max-width:900px; width:95%;">
             <span class="close" onclick="closeAccountDetailsModal()">&times;</span>
             <header style="margin-bottom:1.5rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:15px;">
-                <h2 id="ad-title" style="word-break:break-all; margin-bottom: 10px;">Account Email</h2>
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom: 10px;">
+                    <h2 id="ad-title" style="word-break:break-all; margin:0;">Account Email</h2>
+                    <button class="btn-primary" id="ad-edit-acc-btn" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; display:inline-flex; align-items:center; gap:5px; border-color: var(--primary); color: var(--primary); background: rgba(212, 175, 55, 0.1);">
+                        <i class="fa-solid fa-pen"></i> <span data-i18n="btn_edit_account">Editar Cuenta</span>
+                    </button>
+                </div>
                 <div id="ad-credentials" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
                     <!-- Credentials injected here -->
                 </div>
