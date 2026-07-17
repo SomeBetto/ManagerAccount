@@ -1,19 +1,22 @@
 const API_URL = '/api';
 
-let currentView = 'accounts';
+let currentView = 'dashboard';
 let accounts = [];
 let characters = [];
 let items = [];
 let selectedAccountIds = new Set();
+let autotoolInterval = null;
 
 // i18n
 let currentLang = localStorage.getItem('appLang') || 'en';
 const translations = {
     en: {
         // Sidebar
+        sidebar_dashboard: "Dashboard",
         sidebar_accounts: "Accounts",
         sidebar_characters: "Characters",
         sidebar_favorites: "Favorites",
+        sidebar_loginzone: "Login Zone",
         sidebar_items: "Important Items",
         sidebar_vacantes: "Vacantes",
         sidebar_levelzone: "Leveling Zone",
@@ -29,7 +32,11 @@ const translations = {
         page_title_accounts: "Accounts",
         page_title_characters: "Characters",
         page_title_favorites: "Favorites",
+        page_title_loginzone: "Login Zone",
         page_title_items: "Important Items",
+        btn_new_zone: "New Zone",
+        modal_new_login_zone: "New Login Zone",
+        label_zone_name: "Computer / Zone Name",
         page_title_vacantes: "Vacantes",
         page_title_levelzone: "Leveling Zone",
         page_title_dailyevent: "Daily Events",
@@ -107,13 +114,31 @@ const translations = {
         coupon_skip_help: "If you don't want to redeem this coupon for any character in this account, you can skip it.",
         coupon_delete_confirm: "Delete this coupon? Redemption history will remain but the coupon selection will be removed from the list.",
         msg_fetch_error: "Error loading data from server.",
-        btn_edit_account: "Edit Account"
+        btn_edit_account: "Edit Account",
+        kpi_accounts: "Total Accounts",
+        kpi_characters: "Total Characters",
+        kpi_vacantes: "Vacant Accounts",
+        kpi_leveling: "Leveling Queue",
+        kpi_timers: "Active Counters",
+        chart_classes: "Class Distribution",
+        chart_roles: "Character Roles",
+        chart_levels: "Level Ranges",
+        sidebar_autotool: "Auto Tool",
+        autotool_card_autoress: "Auto Ress",
+        autotool_card_autoress_desc: "Detects the Resurrection Confirm Window in open game instances and automatically clicks Accept.",
+        autotool_card_coming_soon: "Coming Soon",
+        autotool_card_autopot: "Auto Pot",
+        autotool_card_autopot_desc: "Automatically uses HP/MP potions when health drops below a configured threshold.",
+        autotool_card_autobuff: "Auto Buff",
+        autotool_card_autobuff_desc: "Automatically keeps buffs active on your character and party members."
     },
     es: {
         // Sidebar
+        sidebar_dashboard: "Panel de Control",
         sidebar_accounts: "Cuentas",
         sidebar_characters: "Personajes",
         sidebar_favorites: "Favoritos",
+        sidebar_loginzone: "Zona de Logeo",
         sidebar_items: "Objetos Importantes",
         sidebar_vacantes: "Vacantes",
         sidebar_levelzone: "Zona de Leveo",
@@ -129,7 +154,11 @@ const translations = {
         page_title_accounts: "Cuentas",
         page_title_characters: "Personajes",
         page_title_favorites: "Favoritos",
+        page_title_loginzone: "Zona de Logeo",
         page_title_items: "Objetos Importantes",
+        btn_new_zone: "Nueva Zona",
+        modal_new_login_zone: "Nueva Zona de Logeo",
+        label_zone_name: "Nombre de la Computadora / Zona",
         page_title_vacantes: "Vacantes",
         page_title_levelzone: "Zona de Leveo",
         page_title_dailyevent: "Eventos Diarios",
@@ -208,7 +237,23 @@ const translations = {
         coupon_skip_help: "Si no quieres canjear este cupón para ningún personaje de esta cuenta, puedes omitirlo.",
         coupon_delete_confirm: "¿Eliminar este cupón? El histórico de canjes se mantendrá, pero el cupón ya no aparecerá en la lista para nuevos canjes.",
         msg_fetch_error: "Error al cargar datos del servidor.",
-        btn_edit_account: "Editar Cuenta"
+        btn_edit_account: "Editar Cuenta",
+        kpi_accounts: "Total Cuentas",
+        kpi_characters: "Total Personajes",
+        kpi_vacantes: "Cuentas con Vacante",
+        kpi_leveling: "Cola de Leveo",
+        kpi_timers: "Contadores Activos",
+        chart_classes: "Distribución de Clases",
+        chart_roles: "Roles de Personaje",
+        chart_levels: "Rango de Niveles",
+        sidebar_autotool: "Auto Tool",
+        autotool_card_autoress: "Auto Ress",
+        autotool_card_autoress_desc: "Detecta la ventana de confirmación de resurrección en las instancias de juego abiertas y hace clic automáticamente en Aceptar.",
+        autotool_card_coming_soon: "Próximamente",
+        autotool_card_autopot: "Auto Poción",
+        autotool_card_autopot_desc: "Usa automáticamente pociones de HP/MP cuando la vida cae por debajo del umbral configurado.",
+        autotool_card_autobuff: "Auto Buff",
+        autotool_card_autobuff_desc: "Mantiene los buffs activos en tu personaje y miembros del grupo de forma automática."
     }
 };
 
@@ -245,6 +290,7 @@ function applyTranslations() {
 }
 
 // DOM Elements
+const dashboardView = document.getElementById('dashboard-view');
 const accountsView = document.getElementById('accounts-view');
 const charactersView = document.getElementById('characters-view');
 const modal = document.getElementById('item-modal');
@@ -255,11 +301,14 @@ const accountCount = document.getElementById('account-count'); // Placeholder if
 const levelZoneView = document.getElementById('levelzone-view');
 const dailyEventView = document.getElementById('dailyevent-view');
 const favoritesView = document.getElementById('favorites-view');
+const loginZoneView = document.getElementById('loginzone-view');
 const itemsView = document.getElementById('items-view');
 const vacantesView = document.getElementById('vacantes-view');
 const couponsView = document.getElementById('coupons-view');
 const contadoresView = document.getElementById('contadores-view');
+const autotoolView = document.getElementById('autotool-view');
 
+let loginZones = [];
 let coupons = [];
 let activeCouponId = null;
 let redemptionStep = 'coupons'; // 'coupons', 'accounts', 'characters'
@@ -313,6 +362,10 @@ function toggleSidebar() {
 
 // Navigation
 function switchView(view) {
+    if (autotoolInterval) {
+        clearInterval(autotoolInterval);
+        autotoolInterval = null;
+    }
     currentView = view;
     document.querySelectorAll('.nav-links li').forEach(li => li.classList.remove('active'));
     const clickedLi = document.querySelector(`.nav-links li[onclick="switchView('${view}')"]`);
@@ -321,7 +374,12 @@ function switchView(view) {
     // Remove active from all view sections
     document.querySelectorAll('.view-section').forEach(section => section.classList.remove('active'));
 
-    if (view === 'accounts') {
+    if (view === 'dashboard') {
+        if (dashboardView) dashboardView.classList.add('active');
+        pageTitle.innerHTML = i18n('sidebar_dashboard');
+        // Fetch queue and render stats
+        fetchLevelQueue().then(() => renderDashboard());
+    } else if (view === 'accounts') {
         accountsView.classList.add('active');
         pageTitle.innerHTML = `${i18n('page_title_accounts')} <span id="account-count" style="font-size:1rem; opacity:0.7; font-weight:400;">(${accounts.length})</span>`;
         const searchInput = document.getElementById('account-search-input');
@@ -338,6 +396,10 @@ function switchView(view) {
         if (favoritesView) favoritesView.classList.add('active');
         pageTitle.innerHTML = `${i18n('page_title_favorites')} <span id="fav-count" style="font-size:1rem; opacity:0.7; font-weight:400;">(0)</span>`;
         fetchAccounts().then(() => fetchCharacters());
+    } else if (view === 'loginzone') {
+        if (loginZoneView) loginZoneView.classList.add('active');
+        pageTitle.innerHTML = i18n('page_title_loginzone');
+        fetchAccounts().then(() => fetchCharacters().then(() => renderLoginZones()));
     } else if (view === 'items') {
         if (itemsView) itemsView.classList.add('active');
         pageTitle.innerHTML = i18n('page_title_items');
@@ -363,6 +425,11 @@ function switchView(view) {
         if (contadoresView) contadoresView.classList.add('active');
         pageTitle.innerHTML = i18n('page_title_contadores');
         renderContadores();
+    } else if (view === 'autotool') {
+        if (autotoolView) autotoolView.classList.add('active');
+        pageTitle.innerHTML = i18n('sidebar_autotool');
+        fetchAutoToolStatus();
+        autotoolInterval = setInterval(fetchAutoToolStatus, 2000);
     }
     updateHeaderButtons(view);
 }
@@ -392,6 +459,7 @@ async function fetchAccounts() {
             renderAccounts();
             updateFilterOptions();
             if (currentView === 'vacantes') renderVacantes();
+            if (currentView === 'dashboard') renderDashboard();
         } else {
             console.warn("Error fetching accounts:", await res.json());
             accounts = [];
@@ -399,13 +467,33 @@ async function fetchAccounts() {
     } catch (e) { console.error(e); accounts = []; }
 }
 
+function syncCharacterTypesWithDatabase() {
+    let updated = false;
+    characters.forEach(c => {
+        if (c.char_type && typeof c.char_type === 'string') {
+            const val = c.char_type.trim();
+            if (val && !charTypes.includes(val)) {
+                charTypes.push(val);
+                updated = true;
+            }
+        }
+    });
+    if (updated) {
+        localStorage.setItem('charTypes', JSON.stringify(charTypes));
+        updateTypeOptions();
+        renderTypesConfig();
+    }
+}
+
 async function fetchCharacters() {
     try {
         const res = await fetch(`${API_URL}/characters`);
         if (res.ok) {
             characters = await res.json();
+            syncCharacterTypesWithDatabase();
             renderCharacters();
             if (currentView === 'vacantes') renderVacantes();
+            if (currentView === 'dashboard') renderDashboard();
         } else {
             console.warn("Error fetching characters:", await res.json());
             characters = [];
@@ -652,6 +740,7 @@ async function saveConfig() {
 // Character Types Logic
 function renderTypesConfig() {
     const list = document.getElementById('config-types-list');
+    if (!list) return;
     list.innerHTML = charTypes.map(t => `
         <span class="type-tag">
             ${t}
@@ -845,8 +934,8 @@ function renderCharactersHTML(list, targetGridId = 'characters-grid') {
                         <div class="card-title clickable" style="word-break:break-all;" onclick="openAccountDetailsModal(${char.account_id})">${char.name || 'Unnamed'}</div>
                     </div>
                     <div class="card-content">
-                        <p>${i18n('field_level')} <span class="value">${char.level || 0}</span></p>
-                        <p>${i18n('field_class')} <span class="value">${char.class_name || 'None'}</span></p>
+                        <p>${i18n('field_level')} <span class="value" style="font-weight:700; color:var(--primary);"><i class="fa-solid fa-angles-up"></i> Lvl ${char.level || 0}</span></p>
+                        <p>${i18n('field_class')} <span class="badge badge-${(char.class_name || 'Vagrant').toLowerCase()}">${char.class_name || 'None'}</span></p>
                         <p>${i18n('settings_char_types')} <span class="badge badge-${charTypeLower}">${charType}</span></p>
                         <div class="recommended-spot">
                             <i class="fa-solid fa-map-location-dot"></i> <span>${getRecommendedZone(char.level)}</span>
@@ -1206,20 +1295,22 @@ function copyToClipboard(text) {
         return;
     }
 
+    const triggerEl = document.activeElement;
+
     // Try modern API
     if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(text).then(() => {
-            showCopyFeedback();
+            showCopyFeedback(triggerEl);
         }).catch(err => {
             console.error('Async: Could not copy text: ', err);
-            fallbackCopyTextToClipboard(text);
+            fallbackCopyTextToClipboard(text, triggerEl);
         });
     } else {
-        fallbackCopyTextToClipboard(text);
+        fallbackCopyTextToClipboard(text, triggerEl);
     }
 }
 
-function fallbackCopyTextToClipboard(text) {
+function fallbackCopyTextToClipboard(text, triggerEl) {
     const textArea = document.createElement("textarea");
     textArea.value = text;
 
@@ -1235,7 +1326,7 @@ function fallbackCopyTextToClipboard(text) {
 
     try {
         const successful = document.execCommand('copy');
-        if (successful) showCopyFeedback();
+        if (successful) showCopyFeedback(triggerEl);
         else alert('Copy failed. Please manually copy.');
     } catch (err) {
         console.error('Fallback: Oops, unable to copy', err);
@@ -1243,14 +1334,33 @@ function fallbackCopyTextToClipboard(text) {
     }
 
     document.body.removeChild(textArea);
+    if (triggerEl) triggerEl.focus();
 }
 
-function showCopyFeedback() {
-    const el = document.activeElement;
+function showCopyFeedback(el) {
+    if (!el) el = document.activeElement;
     if (el) {
-        const original = el.style.color;
-        el.style.color = 'var(--success)';
-        setTimeout(() => el.style.color = original || 'var(--text-muted)', 500);
+        const tooltip = document.createElement('div');
+        tooltip.className = 'copy-tooltip';
+        tooltip.innerText = i18n('msg_copy_success') || '¡Copiado!';
+        document.body.appendChild(tooltip);
+        
+        const rect = el.getBoundingClientRect();
+        const tooltipRect = tooltip.getBoundingClientRect();
+        
+        // Position it center-aligned horizontally, above the target button
+        const top = window.scrollY + rect.top - tooltipRect.height - 8;
+        const left = window.scrollX + rect.left + (rect.width / 2);
+        
+        tooltip.style.top = `${top}px`;
+        tooltip.style.left = `${left}px`;
+        
+        setTimeout(() => {
+            tooltip.classList.add('fade-out');
+            setTimeout(() => {
+                if (tooltip.parentNode) tooltip.parentNode.removeChild(tooltip);
+            }, 300);
+        }, 1000);
     }
 }
 
@@ -1354,10 +1464,11 @@ let levelQueue = [];
 
 async function fetchLevelQueue() {
     try {
-        const res = await fetch(`${API_URL}/leveling`);
+        const res = await fetch(`${API_URL}/levelzone`);
         if (res.ok) {
             levelQueue = await res.json();
             renderLevelQueue();
+            if (currentView === 'dashboard') renderDashboard();
         } else {
             console.warn("Error fetching level queue:", await res.json());
             levelQueue = [];
@@ -2683,4 +2794,410 @@ async function deleteCharacterFromAccountDetails(charId, accountId) {
 async function toggleFavoriteFromAccountDetails(charId, accountId) {
     await toggleFavorite(charId);
     openAccountDetailsModal(accountId);
+}
+
+// ---------------------------------------------------------
+// Zona de Logeo (Login Zones)
+// ---------------------------------------------------------
+
+function loadLoginZones() {
+    const saved = localStorage.getItem('login_zones');
+    if (saved) {
+        try {
+            loginZones = JSON.parse(saved);
+        } catch (e) {
+            console.error("Error parsing login_zones:", e);
+            loginZones = [];
+        }
+    } else {
+        loginZones = [];
+    }
+}
+
+function saveLoginZones() {
+    localStorage.setItem('login_zones', JSON.stringify(loginZones));
+}
+
+function renderLoginZones() {
+    const grid = document.getElementById('loginzone-grid');
+    if (!grid) return;
+
+    loadLoginZones();
+
+    if (loginZones.length === 0) {
+        grid.innerHTML = `
+            <div style="grid-column: 1/-1; text-align: center; padding: 3rem; background: var(--glass-bg); border: 1px dashed var(--glass-border); border-radius: 16px; opacity: 0.7;">
+                <i class="fa-solid fa-desktop" style="font-size: 3rem; color: var(--primary); margin-bottom: 1rem; display: block;"></i>
+                <p>No hay zonas de logeo creadas.</p>
+                <button class="btn-primary" onclick="openLoginZoneModal()" style="margin-top: 1rem;">Crear Primera Zona</button>
+            </div>
+        `;
+        return;
+    }
+
+    // Helper to get Account Email
+    const getAccountEmail = (id) => {
+        if (!id) return 'No Account';
+        const acc = accounts.find(a => a.id == id);
+        return acc ? acc.email : 'Unknown';
+    };
+
+    grid.innerHTML = loginZones.map(zone => {
+        // HTML for assigned characters list
+        let zoneCharactersHtml = '';
+        if (!zone.characterIds || zone.characterIds.length === 0) {
+            zoneCharactersHtml = `<p style="opacity:0.5; font-style:italic; font-size:0.85rem; padding:10px 0; text-align:center;">Sin personajes asignados.</p>`;
+        } else {
+            zoneCharactersHtml = zone.characterIds.map(charId => {
+                const char = characters.find(c => c.id == charId);
+                if (!char) return ''; // Skip if not found
+                
+                const charType = char.char_type || 'Unknown';
+                const charTypeLower = charType.toLowerCase ? charType.toLowerCase() : 'unknown';
+                
+                return `
+                    <div class="zone-char-item" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); padding:8px; border-radius:8px; display:flex; flex-direction:column; gap:5px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-weight:600; color:white; font-size:0.9rem; cursor:pointer;" class="clickable" onclick="openAccountDetailsModal(${char.account_id})">${char.name}</span>
+                            <button class="icon-btn delete" onclick="removeCharacterFromZone(${zone.id}, ${char.id})" title="Desasignar" style="padding:2px; font-size:0.75rem;">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.75rem; opacity:0.7;">
+                            <span>Niv. ${char.level} - ${char.class_name}</span>
+                            <span class="badge badge-${charTypeLower}" style="font-size:0.65rem; padding:1px 4px;">${charType}</span>
+                        </div>
+                        <div style="display:flex; gap:5px; margin-top:3px; justify-content:flex-end;">
+                            <button class="btn-secondary" style="padding:0.15rem 0.35rem; font-size:0.75rem; border-radius:4px;" onclick="copyToClipboard('${getAccountEmail(char.account_id)}')" title="${i18n('action_copy_email')}"><i class="fa-solid fa-envelope"></i></button>
+                            <button class="btn-secondary" style="padding:0.15rem 0.35rem; font-size:0.75rem; border-radius:4px;" onclick="copyCharacterPassword(${char.id})" title="${i18n('action_copy_pass')}"><i class="fa-solid fa-key"></i></button>
+                            <button class="btn-secondary" style="padding:0.15rem 0.35rem; font-size:0.75rem; border-radius:4px;" onclick="copyAccountPin(${char.account_id})" title="${i18n('action_copy_pin')}"><i class="fa-solid fa-lock"></i></button>
+                            <button class="btn-autologin" style="padding:0.15rem 0.35rem; font-size:0.75rem; border-radius:4px;" onclick="triggerAutoLogin(${char.account_id})" title="Auto-Login"><i class="fa-solid fa-keyboard"></i></button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        return `
+            <div class="card">
+                <div class="card-bar" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:0.8rem; margin-bottom:0.8rem; border-bottom:1px solid rgba(255,255,255,0.05);">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-desktop" style="color:var(--primary); font-size:1.1rem;"></i>
+                        <span style="font-weight:600; font-size:1.05rem;">${zone.name}</span>
+                    </div>
+                    <div class="card-actions" style="opacity:1;">
+                        <button class="icon-btn" onclick="openLoginZoneModal(${zone.id})" title="Editar"><i class="fa-solid fa-pen"></i></button>
+                        <button class="icon-btn delete" onclick="deleteLoginZone(${zone.id})" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </div>
+                
+                <div class="card-content" style="display:flex; flex-direction:column; gap:10px; padding:0;">
+                    <div style="font-size:0.8rem; font-weight:600; opacity:0.8; display:flex; justify-content:space-between; align-items:center;">
+                        <span>Personajes Asignados (${(zone.characterIds || []).length})</span>
+                    </div>
+                    <div class="zone-characters-list" style="display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto; padding-right:3px;">
+                        ${zoneCharactersHtml}
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function openLoginZoneModal(id = null) {
+    const modalEl = document.getElementById('loginzone-modal');
+    if (!modalEl) return;
+
+    const titleEl = document.getElementById('loginzone-modal-title');
+    const idInput = document.getElementById('loginzone-id-input');
+    const nameInput = document.getElementById('loginzone-name-input');
+    const checklistContainer = document.getElementById('loginzone-chars-checklist');
+
+    let zone = null;
+    if (id) {
+        zone = loginZones.find(z => z.id == id);
+        if (zone) {
+            titleEl.innerText = currentLang === 'es' ? "Editar Zona de Logeo" : "Edit Login Zone";
+            idInput.value = zone.id;
+            nameInput.value = zone.name;
+        }
+    } else {
+        titleEl.innerText = currentLang === 'es' ? "Nueva Zona de Logeo" : "New Login Zone";
+        idInput.value = '';
+        nameInput.value = '';
+    }
+
+    // Populate checklist of characters
+    if (checklistContainer) {
+        const assignedSet = zone && zone.characterIds ? new Set(zone.characterIds.map(cid => parseInt(cid))) : new Set();
+        
+        checklistContainer.innerHTML = characters
+            .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+            .map(char => {
+                const isChecked = assignedSet.has(parseInt(char.id));
+                return `
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9rem; padding: 4px; border-radius: 4px; transition: background 0.2s;">
+                        <input type="checkbox" class="zone-char-checkbox" value="${char.id}" ${isChecked ? 'checked' : ''} style="accent-color: var(--primary); cursor: pointer; width: 16px; height: 16px;">
+                        <span>${char.name} <span style="font-size:0.75rem; opacity:0.6;">(Niv. ${char.level} - ${char.class_name || 'None'})</span></span>
+                    </label>
+                `;
+            }).join('') || `<p style="opacity:0.5; font-style:italic; font-size:0.85rem; padding:5px; text-align:center;">${currentLang === 'es' ? 'No hay personajes disponibles.' : 'No characters available.'}</p>`;
+    }
+
+    modalEl.classList.add('show');
+}
+
+function closeLoginZoneModal() {
+    const modalEl = document.getElementById('loginzone-modal');
+    if (modalEl) modalEl.classList.remove('show');
+}
+
+function submitLoginZone() {
+    const idInput = document.getElementById('loginzone-id-input');
+    const nameInput = document.getElementById('loginzone-name-input');
+    const name = nameInput.value.trim();
+
+    if (!name) {
+        alert(currentLang === 'es' ? "Por favor ingrese un nombre para la zona." : "Please enter a zone name.");
+        return;
+    }
+
+    // Get checked character IDs
+    const checkedCheckboxes = document.querySelectorAll('.zone-char-checkbox:checked');
+    const characterIds = Array.from(checkedCheckboxes).map(cb => parseInt(cb.value));
+
+    const id = idInput.value;
+    if (id) {
+        // Edit
+        const zone = loginZones.find(z => z.id == id);
+        if (zone) {
+            zone.name = name;
+            zone.characterIds = characterIds;
+        }
+    } else {
+        // Create new
+        const newZone = {
+            id: Date.now(),
+            name: name,
+            characterIds: characterIds
+        };
+        loginZones.push(newZone);
+    }
+
+    saveLoginZones();
+    closeLoginZoneModal();
+    renderLoginZones();
+}
+
+function deleteLoginZone(id) {
+    if (!confirm(currentLang === 'es' ? "¿Estás seguro de que quieres eliminar esta zona?" : "Are you sure you want to delete this zone?")) {
+        return;
+    }
+    loginZones = loginZones.filter(z => z.id != id);
+    saveLoginZones();
+    renderLoginZones();
+}
+
+function removeCharacterFromZone(zoneId, charId) {
+    const zone = loginZones.find(z => z.id == zoneId);
+    if (zone && zone.characterIds) {
+        zone.characterIds = zone.characterIds.filter(id => id != charId);
+        saveLoginZones();
+        renderLoginZones();
+    }
+}
+
+function renderDashboard() {
+    // 1. KPI Cards data
+    const totalAccounts = accounts.length;
+    const totalCharacters = characters.length;
+    
+    const vacantAccounts = accounts.filter(acc => {
+        const charCount = characters.filter(c => c.account_id == acc.id).length;
+        return charCount < 3;
+    }).length;
+    
+    const levelingQueue = levelQueue.length;
+    
+    const activeTimers = contadores.filter(c => c.endTime !== null && c.endTime > Date.now()).length;
+
+    // Update KPI UI
+    const elAccounts = document.getElementById('kpi-total-accounts');
+    if (elAccounts) elAccounts.innerText = totalAccounts;
+
+    const elCharacters = document.getElementById('kpi-total-characters');
+    if (elCharacters) elCharacters.innerText = totalCharacters;
+
+    const elVacantes = document.getElementById('kpi-total-vacantes');
+    if (elVacantes) elVacantes.innerText = vacantAccounts;
+
+    const elLeveling = document.getElementById('kpi-leveling-queue');
+    if (elLeveling) elLeveling.innerText = levelingQueue;
+
+    const elTimers = document.getElementById('kpi-active-timers');
+    if (elTimers) elTimers.innerText = activeTimers;
+
+    // 2. Class Distribution Progress List
+    const classChart = document.getElementById('class-dist-chart');
+    if (classChart) {
+        if (totalCharacters === 0) {
+            classChart.innerHTML = `<p style="opacity:0.5; font-style:italic;">${i18n('field_desc_empty')}</p>`;
+        } else {
+            const classCounts = {};
+            characters.forEach(c => {
+                const cls = c.class_name || 'Vagrant';
+                classCounts[cls] = (classCounts[cls] || 0) + 1;
+            });
+
+            // Sort descending
+            const sortedClasses = Object.entries(classCounts).sort((a, b) => b[1] - a[1]);
+
+            let html = '<div class="progress-list">';
+            sortedClasses.forEach(([cls, count]) => {
+                const pct = Math.round((count / totalCharacters) * 100);
+                const clsLower = cls.toLowerCase();
+                html += `
+                <div class="progress-item">
+                    <div class="progress-header">
+                        <span class="progress-name">
+                            <span class="badge badge-${clsLower}">${cls}</span>
+                        </span>
+                        <span class="progress-value" style="font-weight:600; color:var(--text-main);">${count} (${pct}%)</span>
+                    </div>
+                    <div class="progress-track">
+                        <div class="progress-bar" style="width: ${pct}%; background: var(--cls-${clsLower}, var(--primary));"></div>
+                    </div>
+                </div>`;
+            });
+            html += '</div>';
+            classChart.innerHTML = html;
+        }
+    }
+
+    // 3. Roles and Types Progress List
+    const roleChart = document.getElementById('role-dist-chart');
+    if (roleChart) {
+        if (totalCharacters === 0) {
+            roleChart.innerHTML = `<p style="opacity:0.5; font-style:italic;">${i18n('field_desc_empty')}</p>`;
+        } else {
+            const typeCounts = {};
+            characters.forEach(c => {
+                const type = c.char_type || 'Unknown';
+                typeCounts[type] = (typeCounts[type] || 0) + 1;
+            });
+
+            const sortedTypes = Object.entries(typeCounts).sort((a, b) => b[1] - a[1]);
+
+            let html = '<div class="progress-list">';
+            sortedTypes.forEach(([type, count]) => {
+                const pct = Math.round((count / totalCharacters) * 100);
+                let icon = '<i class="fa-solid fa-users-gear" style="color:var(--primary);"></i>';
+                if (type.toLowerCase().includes('main')) icon = '<i class="fa-solid fa-star" style="color:#fbbf24;"></i>';
+                else if (type.toLowerCase().includes('farm')) icon = '<i class="fa-solid fa-wheat-awn" style="color:#f59e0b;"></i>';
+                else if (type.toLowerCase().includes('filler') || type.toLowerCase().includes('party')) icon = '<i class="fa-solid fa-user-plus" style="color:#3b82f6;"></i>';
+                
+                html += `
+                <div class="progress-item">
+                    <div class="progress-header">
+                        <span class="progress-name">${icon} ${type}</span>
+                        <span class="progress-value" style="font-weight:600; color:var(--text-main);">${count} (${pct}%)</span>
+                    </div>
+                    <div class="progress-track">
+                        <div class="progress-bar" style="width: ${pct}%; background: linear-gradient(90deg, var(--primary), var(--primary-hover));"></div>
+                    </div>
+                </div>`;
+            });
+            html += '</div>';
+            roleChart.innerHTML = html;
+        }
+    }
+
+    // 4. Level Ranges Bar Chart
+    const levelChart = document.getElementById('level-dist-chart');
+    if (levelChart) {
+        if (totalCharacters === 0) {
+            levelChart.innerHTML = `<p style="opacity:0.5; font-style:italic;">${i18n('field_desc_empty')}</p>`;
+        } else {
+            const ranges = [
+                { label: '1-15', min: 1, max: 15, count: 0 },
+                { label: '16-60', min: 16, max: 60, count: 0 },
+                { label: '61-90', min: 61, max: 90, count: 0 },
+                { label: '91-120', min: 91, max: 120, count: 0 },
+                { label: '121+', min: 121, max: 200, count: 0 }
+            ];
+
+            characters.forEach(c => {
+                const lvl = c.level || 1;
+                for (const r of ranges) {
+                    if (lvl >= r.min && lvl <= r.max) {
+                        r.count++;
+                        break;
+                    }
+                }
+            });
+
+            const maxCount = Math.max(...ranges.map(r => r.count), 1);
+
+            let html = `<div style="display:flex; justify-content:space-around; align-items:flex-end; height:180px; width:100%; padding-top:20px;">`;
+            ranges.forEach(r => {
+                const pctHeight = Math.max(5, Math.round((r.count / maxCount) * 140)); // Max height of bar is 140px
+                html += `
+                <div style="display:flex; flex-direction:column; align-items:center; flex:1;">
+                    <span style="font-size:0.75rem; color:var(--text-main); font-weight:600; margin-bottom:4px;">${r.count}</span>
+                    <div style="width:28px; height:${pctHeight}px; background:linear-gradient(to top, var(--secondary), var(--primary)); border-radius:4px 4px 0 0; border:1px solid var(--glass-border); transition: height 0.5s;"></div>
+                    <span style="font-size:0.7rem; color:var(--text-muted); margin-top:8px;">${r.label}</span>
+                </div>`;
+            });
+            html += '</div>';
+            levelChart.innerHTML = html;
+        }
+    }
+}
+
+// Auto Tool Integration
+async function fetchAutoToolStatus() {
+    try {
+        const res = await fetch(`${API_URL}/autotool/status`);
+        if (res.ok) {
+            const data = await res.json();
+            updateAutoToolUI(data);
+        }
+    } catch (e) {
+        console.error("Error fetching autotool status:", e);
+    }
+}
+
+async function toggleAutoRess(enabled) {
+    try {
+        const res = await fetch(`${API_URL}/autotool/toggle`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled })
+        });
+        if (res.ok) {
+            const data = await res.json();
+            updateAutoToolUI(data);
+        }
+    } catch (e) {
+        console.error("Error toggling autoress:", e);
+    }
+}
+
+function updateAutoToolUI(data) {
+    const toggle = document.getElementById('autoress-toggle');
+    const badge = document.getElementById('autoress-status-badge');
+    const countEl = document.getElementById('autoress-count');
+    
+    if (toggle) toggle.checked = data.enabled;
+    if (countEl) countEl.innerText = data.count;
+    
+    if (badge) {
+        if (data.enabled) {
+            badge.className = 'tool-status-badge active';
+            badge.querySelector('.status-text').innerText = 'ON';
+        } else {
+            badge.className = 'tool-status-badge inactive';
+            badge.querySelector('.status-text').innerText = 'OFF';
+        }
+    }
 }

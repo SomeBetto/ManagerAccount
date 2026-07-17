@@ -24,12 +24,16 @@
                 <span>Flyff</span>
             </div>
             <ul class="nav-links">
-                <li onclick="switchView('accounts')" class="active"><i class="fa-solid fa-user-shield"></i> <span
+                <li onclick="switchView('dashboard')" class="active"><i class="fa-solid fa-gauge-high"></i> <span
+                        data-i18n="sidebar_dashboard">Dashboard</span></li>
+                <li onclick="switchView('accounts')"><i class="fa-solid fa-user-shield"></i> <span
                         data-i18n="sidebar_accounts">Accounts</span></li>
                 <li onclick="switchView('characters')"><i class="fa-solid fa-users"></i> <span
                         data-i18n="sidebar_characters">Characters</span></li>
                 <li onclick="switchView('favorites')"><i class="fa-solid fa-star"></i> <span
                         data-i18n="sidebar_favorites">Favorites</span></li>
+                <li onclick="switchView('loginzone')"><i class="fa-solid fa-desktop"></i> <span
+                        data-i18n="sidebar_loginzone">Zona de Logeo</span></li>
                 <li onclick="switchView('items')"><i class="fa-solid fa-toolbox"></i> <span
                         data-i18n="sidebar_items">Important Items</span></li>
                 <li onclick="switchView('vacantes')"><i class="fa-solid fa-door-open"></i> <span
@@ -42,6 +46,8 @@
                         data-i18n="sidebar_coupons">Coupons</span></li>
                 <li onclick="switchView('contadores')"><i class="fa-solid fa-clock"></i> <span
                         data-i18n="sidebar_contadores">Contadores</span></li>
+                <li onclick="switchView('autotool')"><i class="fa-solid fa-robot"></i> <span
+                        data-i18n="sidebar_autotool">Auto Tool</span></li>
                 <li onclick="switchView('fashion')" style="display:none;"><i class="fa-solid fa-shirt"></i> <span
                         data-i18n="sidebar_fashion">Fashion Viewer</span></li>
             </ul>
@@ -97,7 +103,69 @@
                 </button>
             </header>
 
-            <div id="accounts-view" class="view-section active">
+            <!-- Dashboard View -->
+            <div id="dashboard-view" class="view-section active">
+                <div class="dashboard-kpi-grid">
+                    <div class="kpi-card" onclick="switchView('accounts')">
+                        <div class="kpi-icon" style="color: #60a5fa;"><i class="fa-solid fa-user-shield"></i></div>
+                        <div class="kpi-info">
+                            <div class="kpi-value" id="kpi-total-accounts">0</div>
+                            <div class="kpi-label" data-i18n="kpi_accounts">Total Accounts</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card" onclick="switchView('characters')">
+                        <div class="kpi-icon" style="color: var(--primary);"><i class="fa-solid fa-users"></i></div>
+                        <div class="kpi-info">
+                            <div class="kpi-value" id="kpi-total-characters">0</div>
+                            <div class="kpi-label" data-i18n="kpi_characters">Total Characters</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card" onclick="switchView('vacantes')">
+                        <div class="kpi-icon" style="color: var(--success);"><i class="fa-solid fa-door-open"></i></div>
+                        <div class="kpi-info">
+                            <div class="kpi-value" id="kpi-total-vacantes">0</div>
+                            <div class="kpi-label" data-i18n="kpi_vacantes">Vacant Accounts</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card" onclick="switchView('levelzone')">
+                        <div class="kpi-icon" style="color: #f59e0b;"><i class="fa-solid fa-person-falling"></i></div>
+                        <div class="kpi-info">
+                            <div class="kpi-value" id="kpi-leveling-queue">0</div>
+                            <div class="kpi-label" data-i18n="kpi_leveling">Leveling Queue</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card" onclick="switchView('contadores')">
+                        <div class="kpi-icon" style="color: var(--danger);"><i class="fa-solid fa-clock"></i></div>
+                        <div class="kpi-info">
+                            <div class="kpi-value" id="kpi-active-timers">0</div>
+                            <div class="kpi-label" data-i18n="kpi_timers">Active Counters</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-charts-grid">
+                    <div class="chart-card">
+                        <h3 class="chart-title"><i class="fa-solid fa-chart-bar"></i> <span data-i18n="chart_classes">Class Distribution</span></h3>
+                        <div class="chart-content" id="class-dist-chart">
+                            <!-- Injected dynamically in app.js -->
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <h3 class="chart-title"><i class="fa-solid fa-chart-pie"></i> <span data-i18n="chart_roles">Character Roles</span></h3>
+                        <div class="chart-content" id="role-dist-chart">
+                            <!-- Injected dynamically in app.js -->
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <h3 class="chart-title"><i class="fa-solid fa-arrow-up-9-1"></i> <span data-i18n="chart_levels">Level Ranges</span></h3>
+                        <div class="chart-content" id="level-dist-chart">
+                            <!-- Injected dynamically in app.js -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="accounts-view" class="view-section">
                 <div class="filter-bar" style="margin-bottom: 1.5rem;">
                     <div class="filter-group">
                         <div class="search-input-wrapper" style="width: 100%; max-width: 400px; position: relative; display: inline-flex; align-items: center;">
@@ -126,10 +194,15 @@
                         <select id="account-filter" onchange="renderCharacters()">
                             <option value="">All Accounts</option>
                         </select>
-                        <select id="type-filter" onchange="renderCharacters()">
-                            <option value="">All Types</option>
-                            <!-- Dynamic options -->
-                        </select>
+                        <div style="display:inline-flex; gap:5px; align-items:center;">
+                            <select id="type-filter" onchange="renderCharacters()" style="min-width:130px;">
+                                <option value="">All Types</option>
+                                <!-- Dynamic options -->
+                            </select>
+                            <button type="button" class="icon-btn" onclick="openConfigModal()" title="Gestionar Categorías" style="height:38px; width:38px; border-radius:10px; border-color:var(--glass-border); flex-shrink:0;">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                        </div>
                         <select id="class-filter" onchange="renderCharacters()">
                             <option value="">Todas las clases</option>
                             <option value="Vagrant">Vagrant</option>
@@ -162,6 +235,18 @@
             <div id="favorites-view" class="view-section">
                 <div class="card-grid" id="favorites-grid">
                     <!-- Favorite characters interpolated here -->
+                </div>
+            </div>
+
+            <div id="loginzone-view" class="view-section">
+                <header style="margin-bottom:1rem; display:flex; justify-content:space-between; align-items:center;">
+                    <h2 data-i18n="page_title_loginzone">Zona de Logeo</h2>
+                    <button class="btn-primary" onclick="openLoginZoneModal()">
+                        <i class="fa-solid fa-plus"></i> <span data-i18n="btn_new_zone">Nueva Zona</span>
+                    </button>
+                </header>
+                <div class="card-grid" id="loginzone-grid">
+                    <!-- Login Zone cards populated dynamically -->
                 </div>
             </div>
 
@@ -500,6 +585,73 @@
                                 <!-- Saved outfits will populate here dynamically -->
                                 <p style="text-align:center; opacity:0.5; font-size:0.9rem; padding: 20px 0;" data-i18n="outfits_empty">No tienes outfits guardados aún.</p>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Auto Tool View -->
+            <div id="autotool-view" class="view-section">
+                <header style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+                    <h2 data-i18n="sidebar_autotool">Auto Tool</h2>
+                </header>
+
+                <div class="card-grid">
+                    <!-- Auto Ress Card -->
+                    <div class="card autotool-card active-tool">
+                        <div class="card-header">
+                            <h3 class="card-title" data-i18n="autotool_card_autoress">Auto Ress</h3>
+                            <div class="tool-status-badge inactive" id="autoress-status-badge">
+                                <span class="status-dot"></span>
+                                <span class="status-text">OFF</span>
+                            </div>
+                        </div>
+                        <div class="card-content">
+                            <p data-i18n="autotool_card_autoress_desc" style="margin-bottom: 1.5rem; line-height: 1.5; opacity: 0.85;">
+                                Detects the Resurrection Confirm Window in open game instances and automatically clicks Accept.
+                            </p>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 1rem;">
+                                <div class="stat-item">
+                                    <span style="font-size: 0.85rem; opacity: 0.6; display: block; margin-bottom: 2px;">Resurrecciones</span>
+                                    <span class="value" id="autoress-count" style="font-size: 1.3rem; font-weight: 700; color: var(--primary);">0</span>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" id="autoress-toggle" onchange="toggleAutoRess(this.checked)">
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Future Tool 1: Auto Pot -->
+                    <div class="card autotool-card locked-tool" style="position: relative;">
+                        <div class="card-header">
+                            <h3 class="card-title" data-i18n="autotool_card_autopot">Auto Pot</h3>
+                            <div class="tool-status-badge locked">
+                                <i class="fa-solid fa-lock" style="font-size: 0.75rem; margin-right: 4px;"></i>
+                                <span data-i18n="autotool_card_coming_soon" style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700;">Coming Soon</span>
+                            </div>
+                        </div>
+                        <div class="card-content">
+                            <p data-i18n="autotool_card_autopot_desc" style="line-height: 1.5; opacity: 0.5;">
+                                Automatically uses HP/MP potions when health drops below a configured threshold.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Future Tool 2: Auto Buff -->
+                    <div class="card autotool-card locked-tool" style="position: relative;">
+                        <div class="card-header">
+                            <h3 class="card-title" data-i18n="autotool_card_autobuff">Auto Buff</h3>
+                            <div class="tool-status-badge locked">
+                                <i class="fa-solid fa-lock" style="font-size: 0.75rem; margin-right: 4px;"></i>
+                                <span data-i18n="autotool_card_coming_soon" style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700;">Coming Soon</span>
+                            </div>
+                        </div>
+                        <div class="card-content">
+                            <p data-i18n="autotool_card_autobuff_desc" style="line-height: 1.5; opacity: 0.5;">
+                                Automatically keeps buffs active on your character and party members.
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -850,6 +1002,29 @@
             </div>
         </div>
     </div>
+    <!-- Add/Edit Login Zone Modal -->
+    <div id="loginzone-modal" class="modal">
+        <div class="modal-content glass-panel" style="max-width: 400px;">
+            <span class="close" onclick="closeLoginZoneModal()">&times;</span>
+            <h2 id="loginzone-modal-title" data-i18n="modal_new_login_zone">Nueva Zona de Logeo</h2>
+            <input type="hidden" id="loginzone-id-input">
+            <div class="form-group">
+                <label data-i18n="label_zone_name">Nombre de la Computadora / Zona</label>
+                <input type="text" id="loginzone-name-input" placeholder="ej. Computadora Principal, Laptop, PC 2" required>
+            </div>
+            <div class="form-group" style="margin-top: 15px;">
+                <label>Personajes Asignados</label>
+                <div id="loginzone-chars-checklist" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--glass-border); border-radius: 8px; padding: 10px; background: rgba(0,0,0,0.2); display: flex; flex-direction: column; gap: 8px; margin-top: 5px;">
+                    <!-- Checklist of characters populated dynamically -->
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" onclick="closeLoginZoneModal()" data-i18n="modal_cancel">Cancelar</button>
+                <button type="button" class="btn-primary" onclick="submitLoginZone()" data-i18n="modal_save">Guardar</button>
+            </div>
+        </div>
+    </div>
+
 
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>

@@ -6,3 +6,5 @@ from .items import bp as items_bp
 from .config import bp as config_bp
 from .coupons import bp as coupons_bp
 from .fashion import bp as fashion_bp
+from .autotool import bp as autotool_bp
+

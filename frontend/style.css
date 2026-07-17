@@ -326,9 +326,10 @@ h1 {
 }
 
 .card:hover {
-    transform: translateY(-5px);
-    border-color: rgba(212, 175, 55, 0.4);
-    background: var(--card-hover);
+    transform: translateY(-5px) scale(1.01);
+    border-color: rgba(212, 175, 55, 0.5);
+    background: rgba(30, 27, 22, 0.75);
+    box-shadow: 0 12px 30px rgba(212, 175, 55, 0.18), 0 0 15px rgba(212, 175, 55, 0.1);
 }
 
 .card:hover::before {
@@ -1077,5 +1078,459 @@ body.compact-mode #compact-view {
     color: var(--primary) !important;
     background-color: rgba(255, 255, 255, 0.1);
 }
+
+
+/* ==========================================================================
+   NEW VISUAL REDESIGN STYLES
+   ========================================================================== */
+
+/* Dashboard KPI Grid */
+.dashboard-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+}
+
+.kpi-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary), #ffd700);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.kpi-card:hover {
+    transform: translateY(-4px) scale(1.02);
+    border-color: rgba(212, 175, 55, 0.45);
+    background: rgba(30, 27, 22, 0.8);
+    box-shadow: 0 10px 25px rgba(212, 175, 55, 0.15);
+}
+
+.kpi-card:hover::before {
+    opacity: 1;
+}
+
+.kpi-icon {
+    font-size: 1.8rem;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s ease;
+}
+
+.kpi-card:hover .kpi-icon {
+    transform: scale(1.1) rotate(5deg);
+}
+
+.kpi-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.kpi-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-main);
+    line-height: 1.2;
+}
+
+.kpi-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+/* Dashboard Charts Grid */
+.dashboard-charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
+}
+
+.chart-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    min-height: 280px;
+    transition: border-color 0.3s ease;
+}
+
+.chart-card:hover {
+    border-color: rgba(212, 175, 55, 0.3);
+}
+
+.chart-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--primary);
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chart-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    width: 100%;
+}
+
+/* SVG Chart Elements */
+.svg-chart {
+    width: 100%;
+    height: 100%;
+    max-height: 200px;
+    overflow: visible;
+}
+
+.svg-bar {
+    transition: height 0.8s ease, y 0.8s ease, fill 0.3s ease;
+    cursor: pointer;
+}
+
+.svg-bar:hover {
+    fill: var(--primary-hover) !important;
+    filter: drop-shadow(0 0 5px var(--primary));
+}
+
+.svg-label {
+    fill: var(--text-muted);
+    font-size: 10px;
+    font-family: 'Inter', sans-serif;
+    pointer-events: none;
+}
+
+.svg-value {
+    fill: var(--text-main);
+    font-size: 10px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.svg-bar-container:hover .svg-value {
+    opacity: 1;
+}
+
+.pie-slice {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), filter 0.3s;
+    cursor: pointer;
+}
+
+.pie-slice:hover {
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.2));
+}
+
+/* Custom Progress List (for Roles/Types distribution) */
+.progress-list {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.progress-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.progress-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.progress-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+    color: var(--text-main);
+}
+
+.progress-track {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.progress-bar {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Tooltip for Copy Feedback */
+.copy-tooltip {
+    position: fixed;
+    background: rgba(15, 13, 10, 0.95);
+    color: var(--primary-hover);
+    border: 1px solid var(--primary);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    z-index: 10000;
+    pointer-events: none;
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4), 0 0 5px rgba(212, 175, 55, 0.2);
+    animation: tooltipFadeInUp 0.15s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes tooltipFadeInUp {
+    from {
+        opacity: 0;
+        transform: translate(-50%, 8px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+}
+
+.copy-tooltip.fade-out {
+    animation: tooltipFadeOutDown 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes tooltipFadeOutDown {
+    from {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+    to {
+        opacity: 0;
+        transform: translate(-50%, -8px);
+    }
+}
+
+/* Flyff Class Variables & Custom Badges */
+:root {
+    --cls-vagrant: #94a3b8;
+    --cls-mercenary: #64748b;
+    --cls-acrobat: #06b6d4;
+    --cls-assist: #10b981;
+    --cls-magician: #a855f7;
+    --cls-knight: #3b82f6;
+    --cls-blade: #ef4444;
+    --cls-jester: #f59e0b;
+    --cls-ranger: #0ea5e9;
+    --cls-ringmaster: #10b981;
+    --cls-billposter: #dc2626;
+    --cls-psykeeper: #8b5cf6;
+    --cls-elementor: #d946ef;
+}
+
+/* Badges override */
+.badge-vagrant { background: rgba(148, 163, 184, 0.15); color: var(--cls-vagrant); border: 1px solid rgba(148, 163, 184, 0.3); }
+.badge-mercenary { background: rgba(100, 116, 139, 0.15); color: #94a3b8; border: 1px solid rgba(100, 116, 139, 0.3); }
+.badge-acrobat { background: rgba(6, 182, 212, 0.15); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.3); }
+.badge-assist { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+.badge-magician { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+.badge-knight { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+.badge-blade { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+.badge-jester { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+.badge-ranger { background: rgba(14, 165, 233, 0.15); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.3); }
+.badge-ringmaster { background: rgba(16, 185, 129, 0.25); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.5); font-weight: 700; text-shadow: 0 0 4px rgba(16, 185, 129, 0.2); }
+.badge-billposter { background: rgba(220, 38, 38, 0.18); color: #f87171; border: 1px solid rgba(220, 38, 38, 0.4); }
+.badge-psykeeper { background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); }
+.badge-elementor { background: rgba(217, 70, 239, 0.15); color: #f472b6; border: 1px solid rgba(217, 70, 239, 0.3); }
+
+/* Legend & details inside chart cards */
+.chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    justify-content: center;
+    margin-top: 10px;
+    font-size: 0.75rem;
+    width: 100%;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--text-muted);
+}
+
+.legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+/* Switch toggle styling */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 26px;
+}
+
+.switch input { 
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.1);
+  transition: .4s;
+  border: 1px solid var(--glass-border);
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .4s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+input:checked + .slider {
+  background-color: var(--primary);
+  border-color: rgba(212, 175, 55, 0.5);
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px var(--primary);
+}
+
+input:checked + .slider:before {
+  transform: translateX(24px);
+}
+
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+/* Tool status badges */
+.tool-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.tool-status-badge.inactive {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.tool-status-badge.active {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.tool-status-badge.locked {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Status dot blinking pulse */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: currentColor;
+  display: inline-block;
+}
+
+.tool-status-badge.active .status-dot {
+  animation: pulse-dot 1.5s infinite;
+}
+
+@keyframes pulse-dot {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+  
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+  }
+  
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+/* Locked tool card styling */
+.autotool-card.locked-tool {
+  opacity: 0.55;
+  filter: grayscale(30%);
+  background: rgba(255, 255, 255, 0.02);
+  border-style: dashed;
+}
+
+.autotool-card.locked-tool:hover {
+  transform: none !important;
+  border-color: var(--glass-border) !important;
+  box-shadow: none !important;
+  background: rgba(255, 255, 255, 0.02) !important;
+}
+
+.autotool-card.locked-tool::before {
+  display: none;
+}
+
 
 
