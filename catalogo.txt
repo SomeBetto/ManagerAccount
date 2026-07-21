@@ -1,0 +1,6 @@
+Weapon https://flyffwiki.com/knowledge-bank/weapons/
+armor https://flyffwiki.com/knowledge-bank/armor/
+shield https://flyffwiki.com/shields/
+jewerly https://flyffwiki.com/knowledge-bank/jewelry/
+talisman https://flyffwiki.com/knowledge-bank/talisman/
+Fashion https://flyffwiki.com/knowledge-bank/fashion/

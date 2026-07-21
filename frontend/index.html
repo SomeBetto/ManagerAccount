@@ -48,8 +48,12 @@
                         data-i18n="sidebar_contadores">Contadores</span></li>
                 <li onclick="switchView('autotool')"><i class="fa-solid fa-robot"></i> <span
                         data-i18n="sidebar_autotool">Auto Tool</span></li>
-                <li onclick="switchView('fashion')" style="display:none;"><i class="fa-solid fa-shirt"></i> <span
-                        data-i18n="sidebar_fashion">Fashion Viewer</span></li>
+                <li onclick="switchView('gear')"><i class="fa-solid fa-shield-halved"></i> <span
+                        data-i18n="sidebar_gear">Equipamiento & Fashion</span></li>
+                <li onclick="switchView('routines')"><i class="fa-solid fa-list-check"></i> <span
+                        data-i18n="sidebar_routines">Rutinas Diarias</span></li>
+                <li onclick="switchView('expiring')"><i class="fa-solid fa-hourglass-half"></i> <span
+                        data-i18n="sidebar_expiring">Ítems por Expire</span></li>
             </ul>
             <button class="sidebar-toggle compact-btn" onclick="toggleCompactMode()" title="Modo Compacto / Ventana Overlay" style="margin-top:auto; margin-bottom:10px; border-color:var(--primary); color:var(--primary);">
                 <i class="fa-solid fa-compress"></i> <span>Modo Compacto</span>
@@ -339,257 +343,6 @@
                 </div>
             </div>
 
-            <!-- Fashion Viewer View -->
-            <div id="fashion-view" class="view-section">
-                <div class="fashion-layout">
-                    <!-- Column 1: 3D Viewport -->
-                    <div class="fashion-viewport-container">
-                        <div id="fashion-canvas-container">
-                            <canvas id="fashion-canvas"></canvas>
-                        </div>
-                        <div class="fashion-overlay-controls">
-                            <button class="icon-btn" onclick="resetFashionCamera()" title="Reiniciar Cámara">
-                                <i class="fa-solid fa-camera"></i>
-                            </button>
-                            <button class="icon-btn" id="btn-toggle-animation" onclick="toggleFashionAnimation()" title="Pausar/Reanudar Animación">
-                                <i class="fa-solid fa-pause"></i>
-                            </button>
-                            <button class="icon-btn" onclick="randomizeFashion()" title="Combinación Aleatoria">
-                                <i class="fa-solid fa-shuffle"></i>
-                            </button>
-                            <button class="icon-btn delete" onclick="clearFashion()" title="Quitar Todo">
-                                <i class="fa-solid fa-rotate-left"></i>
-                            </button>
-                        </div>
-                        <div class="fashion-loading-spinner" id="fashion-loading" style="display:none;">
-                            <i class="fa-solid fa-circle-notch fa-spin"></i> Cargando visualizador...
-                        </div>
-                    </div>
-
-                    <!-- Column 2: Controls & Options -->
-                    <div class="fashion-sidebar-panel glass-panel">
-                        <!-- Navigation Tabs inside panel -->
-                        <div class="fashion-tabs">
-                            <button class="fashion-tab-btn active" id="tab-btn-base" onclick="switchFashionTab('base')">
-                                <i class="fa-solid fa-user"></i> <span data-i18n="fashion_tab_base">Personaje</span>
-                            </button>
-                            <button class="fashion-tab-btn" id="tab-btn-items" onclick="switchFashionTab('items')">
-                                <i class="fa-solid fa-shirt"></i> <span data-i18n="fashion_tab_items">Ropa y Armas</span>
-                            </button>
-                            <button class="fashion-tab-btn" id="tab-btn-outfits" onclick="switchFashionTab('outfits')">
-                                <i class="fa-solid fa-heart"></i> <span data-i18n="fashion_tab_outfits">Outfits</span>
-                            </button>
-                        </div>
-
-                        <!-- Tab 1: Base Character Customization -->
-                        <div id="fashion-tab-content-base" class="fashion-tab-content active">
-                            <h3 data-i18n="fashion_section_base">Base del Personaje</h3>
-                            
-                            <div class="form-group">
-                                <label data-i18n="fashion_gender">Género</label>
-                                <div class="fashion-gender-selector">
-                                    <button class="btn-gender active" id="btn-gender-male" onclick="setFashionGender('male')">
-                                        <i class="fa-solid fa-mars"></i> <span data-i18n="fashion_gender_male">Masculino</span>
-                                    </button>
-                                    <button class="btn-gender" id="btn-gender-female" onclick="setFashionGender('female')">
-                                        <i class="fa-solid fa-venus"></i> <span data-i18n="fashion_gender_female">Femenino</span>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label data-i18n="fashion_hair_style">Estilo de Cabello</label>
-                                <select id="fashion-hair-style" onchange="updateFashionHairStyle(this.value)">
-                                    <option value="short" data-i18n="hair_short">Corto / Spiky</option>
-                                    <option value="long" data-i18n="hair_long">Largo / Fluyente</option>
-                                    <option value="twintails" data-i18n="hair_twintails">Doble Coleta (Twintails)</option>
-                                    <option value="ponytail" data-i18n="hair_ponytail">Coleta de Caballo (Ponytail)</option>
-                                    <option value="bald" data-i18n="hair_bald">Calvo</option>
-                                </select>
-                            </div>
-
-                            <div class="form-group">
-                                <label data-i18n="fashion_hair_color">Color de Cabello</label>
-                                <div style="display:flex; align-items:center; gap:10px;">
-                                    <input type="color" id="fashion-hair-color" value="#ffd700" oninput="updateFashionHairColor(this.value)" style="width:50px; height:38px; border:1px solid var(--glass-border); border-radius:8px; background:none; cursor:pointer;">
-                                    <div class="fashion-color-presets">
-                                        <span class="color-dot" style="background:#ffd700;" onclick="setHairPresetColor('#ffd700')"></span>
-                                        <span class="color-dot" style="background:#ff4444;" onclick="setHairPresetColor('#ff4444')"></span>
-                                        <span class="color-dot" style="background:#4488ff;" onclick="setHairPresetColor('#4488ff')"></span>
-                                        <span class="color-dot" style="background:#ff44ff;" onclick="setHairPresetColor('#ff44ff')"></span>
-                                        <span class="color-dot" style="background:#ffffff;" onclick="setHairPresetColor('#ffffff')"></span>
-                                        <span class="color-dot" style="background:#222222;" onclick="setHairPresetColor('#222222')"></span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label data-i18n="fashion_skin_tone">Tono de Piel</label>
-                                <div class="fashion-skin-selector">
-                                    <button class="btn-skin active" style="background:#ffd5b4;" onclick="setFashionSkinColor('#ffd5b4', this)" title="Pálido"></button>
-                                    <button class="btn-skin" style="background:#e0a97f;" onclick="setFashionSkinColor('#e0a97f', this)" title="Bronceado"></button>
-                                    <button class="btn-skin" style="background:#8c5b3b;" onclick="setFashionSkinColor('#8c5b3b', this)" title="Oscuro"></button>
-                                    <button class="btn-skin" style="background:#a5d3f5;" onclick="setFashionSkinColor('#a5d3f5', this)" title="Fantasía Azul"></button>
-                                    <button class="btn-skin" style="background:#b3e6c3;" onclick="setFashionSkinColor('#b3e6c3', this)" title="Fantasía Verde"></button>
-                                </div>
-                            </div>
-
-                            <div class="form-group" style="margin-top:20px; border-top:1px solid rgba(255,255,255,0.05); padding-top:15px;">
-                                <label data-i18n="fashion_avatar_anim">Animación del Avatar</label>
-                                <select id="fashion-anim-type" onchange="updateFashionAnimationType(this.value)">
-                                    <option value="idle" data-i18n="anim_idle">Respiración (Idle)</option>
-                                    <option value="float" data-i18n="anim_float">Flotando en el Aire</option>
-                                    <option value="dance" data-i18n="anim_dance">Baile / Movimiento Rítmico</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Tab 2: Clothes & Equipment Customization -->
-                        <div id="fashion-tab-content-items" class="fashion-tab-content">
-                            <h3 data-i18n="fashion_section_equip">Objetos Equipables</h3>
-                            
-                            <div class="fashion-equip-row">
-                                <div class="form-group flex-grow">
-                                    <label data-i18n="fashion_slot_head">Cabeza (Gorro / Hat)</label>
-                                    <select id="fashion-equip-head" onchange="equipFashionItem('head', this.value)">
-                                        <option value="none" data-i18n="equip_none">Ninguno</option>
-                                        <option value="cat_ears" data-i18n="equip_cat_ears">Orejas de Gato</option>
-                                        <option value="halo" data-i18n="equip_halo">Halo Celestial (Glowing)</option>
-                                        <option value="wizard_hat" data-i18n="equip_wizard_hat">Gorro de Mago</option>
-                                        <option value="crown" data-i18n="equip_crown">Corona Real</option>
-                                        <option value="pirate_hat" data-i18n="equip_pirate_hat">Sombrero de Pirata</option>
-                                        <option value="ninja_mask" data-i18n="equip_ninja_mask">Máscara Ninja</option>
-                                    </select>
-                                </div>
-                                <button class="icon-btn-toggle-slot" onclick="toggleSlotVisibility('head')" id="btn-toggle-head" title="Ocultar/Mostrar">
-                                    <i class="fa-solid fa-eye"></i>
-                                </button>
-                            </div>
-
-                            <div class="fashion-equip-row">
-                                <div class="form-group flex-grow">
-                                    <label data-i18n="fashion_slot_suit">Traje (Torso / Suit)</label>
-                                    <select id="fashion-equip-suit" onchange="equipFashionItem('suit', this.value)">
-                                        <option value="common" data-i18n="equip_suit_common">Ropa Común</option>
-                                        <option value="cyberpunk" data-i18n="equip_suit_cyberpunk">Traje Cyberpunk Neón</option>
-                                        <option value="maid" data-i18n="equip_suit_maid">Vestido de Maid</option>
-                                        <option value="dragon" data-i18n="equip_suit_dragon">Armadura de Dragón</option>
-                                        <option value="astronaut" data-i18n="equip_suit_astronaut">Traje de Astronauta</option>
-                                        <option value="school" data-i18n="equip_suit_school">Uniforme Escolar</option>
-                                    </select>
-                                </div>
-                                <button class="icon-btn-toggle-slot" onclick="toggleSlotVisibility('suit')" id="btn-toggle-suit" title="Ocultar/Mostrar">
-                                    <i class="fa-solid fa-eye"></i>
-                                </button>
-                            </div>
-
-                            <div class="fashion-equip-row">
-                                <div class="form-group flex-grow">
-                                    <label data-i18n="fashion_slot_gloves">Guantes (Gloves)</label>
-                                    <select id="fashion-equip-gloves" onchange="equipFashionItem('gloves', this.value)">
-                                        <option value="default" data-i18n="equip_gloves_default">Guantes Comunes</option>
-                                        <option value="gold_bracers" data-i18n="equip_gloves_gold">Brazaletes de Oro</option>
-                                        <option value="boxing" data-i18n="equip_gloves_boxing">Guantes de Boxeo</option>
-                                        <option value="cyber_gloves" data-i18n="equip_gloves_cyber">Guantes Cyberpunk</option>
-                                    </select>
-                                </div>
-                                <button class="icon-btn-toggle-slot" onclick="toggleSlotVisibility('gloves')" id="btn-toggle-gloves" title="Ocultar/Mostrar">
-                                    <i class="fa-solid fa-eye"></i>
-                                </button>
-                            </div>
-
-                            <div class="fashion-equip-row">
-                                <div class="form-group flex-grow">
-                                    <label data-i18n="fashion_slot_shoes">Calzado (Shoes)</label>
-                                    <select id="fashion-equip-shoes" onchange="equipFashionItem('shoes', this.value)">
-                                        <option value="common" data-i18n="equip_shoes_common">Zapatos Comunes</option>
-                                        <option value="metal_boots" data-i18n="equip_shoes_metal">Botas de Metal</option>
-                                        <option value="winged_boots" data-i18n="equip_shoes_winged">Botas Aladas</option>
-                                        <option value="sneakers" data-i18n="equip_shoes_sneakers">Zapatillas Deportivas</option>
-                                    </select>
-                                </div>
-                                <button class="icon-btn-toggle-slot" onclick="toggleSlotVisibility('shoes')" id="btn-toggle-shoes" title="Ocultar/Mostrar">
-                                    <i class="fa-solid fa-eye"></i>
-                                </button>
-                            </div>
-
-                            <div class="fashion-equip-row">
-                                <div class="form-group flex-grow">
-                                    <label data-i18n="fashion_slot_cloak">Espalda (Capa / Cloak)</label>
-                                    <select id="fashion-equip-cloak" onchange="equipFashionItem('cloak', this.value)">
-                                        <option value="none" data-i18n="equip_none">Ninguna</option>
-                                        <option value="angel_wings" data-i18n="equip_wings_angel">Alas de Ángel (Flapping)</option>
-                                        <option value="demon_wings" data-i18n="equip_wings_demon">Alas de Demonio (Flapping)</option>
-                                        <option value="butterfly_wings" data-i18n="equip_wings_butterfly">Alas de Mariposa</option>
-                                        <option value="hero_cape" data-i18n="equip_cloak_hero">Capa de Héroe (Waving)</option>
-                                        <option value="jetpack" data-i18n="equip_cloak_jetpack">Mochila Cohete (Flickering)</option>
-                                    </select>
-                                </div>
-                                <button class="icon-btn-toggle-slot" onclick="toggleSlotVisibility('cloak')" id="btn-toggle-cloak" title="Ocultar/Mostrar">
-                                    <i class="fa-solid fa-eye"></i>
-                                </button>
-                            </div>
-
-                            <div class="fashion-equip-row">
-                                <div class="form-group flex-grow">
-                                    <label data-i18n="fashion_slot_weapon">Arma (Weapon)</label>
-                                    <select id="fashion-equip-weapon" onchange="equipFashionItem('weapon', this.value)">
-                                        <option value="fists" data-i18n="equip_weapon_fists">Puños (Ninguna)</option>
-                                        <option value="laser_saber" data-i18n="equip_weapon_laser">Sable de Luz Neón (Glowing)</option>
-                                        <option value="wood_sword" data-i18n="equip_weapon_wood">Espada de Madera</option>
-                                        <option value="magic_wand" data-i18n="equip_weapon_wand">Vara de Mago Celestial</option>
-                                        <option value="dragon_bow" data-i18n="equip_weapon_bow">Arco de Dragón</option>
-                                        <option value="golden_axe" data-i18n="equip_weapon_axe">Hacha de Batalla Dorada</option>
-                                        <option value="royal_shield" data-i18n="equip_weapon_shield">Escudo Real (Mano Izquierda)</option>
-                                    </select>
-                                </div>
-                                <button class="icon-btn-toggle-slot" onclick="toggleSlotVisibility('weapon')" id="btn-toggle-weapon" title="Ocultar/Mostrar">
-                                    <i class="fa-solid fa-eye"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Tab 3: Outfits Presets & Saving -->
-                        <div id="fashion-tab-content-outfits" class="fashion-tab-content">
-                            <h3 data-i18n="fashion_section_presets">Conjuntos Rápidos (Presets)</h3>
-                            <div class="fashion-presets-grid">
-                                <button class="btn-preset" onclick="loadFashionPreset('angel')">
-                                    <i class="fa-solid fa-wand-magic-sparkles"></i> <span data-i18n="preset_angel">Ángel Celestia</span>
-                                </button>
-                                <button class="btn-preset" onclick="loadFashionPreset('cyberpunk')">
-                                    <i class="fa-solid fa-bolt"></i> <span data-i18n="preset_cyberpunk">Cyberpunk Neón</span>
-                                </button>
-                                <button class="btn-preset" onclick="loadFashionPreset('dragon')">
-                                    <i class="fa-solid fa-fire"></i> <span data-i18n="preset_dragon">Guerrero Dragón</span>
-                                </button>
-                                <button class="btn-preset" onclick="loadFashionPreset('maid')">
-                                    <i class="fa-solid fa-venus-mars"></i> <span data-i18n="preset_maid">Sirvienta Gótica</span>
-                                </button>
-                                <button class="btn-preset" onclick="loadFashionPreset('astronaut')">
-                                    <i class="fa-solid fa-user-astronaut"></i> <span data-i18n="preset_astronaut">Astronauta Vacío</span>
-                                </button>
-                            </div>
-
-                            <hr style="border:0; border-top:1px solid rgba(255,255,255,0.08); margin: 20px 0;">
-
-                            <h3 data-i18n="fashion_section_save">Guardar Outfit Personalizado</h3>
-                            <div style="display:flex; gap:10px; margin-bottom:15px;">
-                                <input type="text" id="outfit-name-input" data-i18n="outfit_name_placeholder" placeholder="Nombre de mi outfit..." style="flex:1;">
-                                <button class="btn-primary" onclick="saveCustomOutfit()" style="padding: 0 15px;">
-                                    <i class="fa-solid fa-floppy-disk"></i> <span data-i18n="btn_save">Guardar</span>
-                                </button>
-                            </div>
-
-                            <h3 data-i18n="fashion_section_saved">Mis Conjuntos Guardados</h3>
-                            <div id="saved-outfits-list" class="saved-outfits-list">
-                                <!-- Saved outfits will populate here dynamically -->
-                                <p style="text-align:center; opacity:0.5; font-size:0.9rem; padding: 20px 0;" data-i18n="outfits_empty">No tienes outfits guardados aún.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Auto Tool View -->
             <div id="autotool-view" class="view-section">
                 <header style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
@@ -654,6 +407,64 @@
                             </p>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Gear & Fashion View -->
+            <div id="gear-view" class="view-section">
+                <header style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <h2>Equipamiento & Fashion</h2>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                        <select id="gear-char-filter" onchange="renderGearView()" style="padding: 0.5rem 1rem; border-radius: 8px; background: rgba(15,23,42,0.6); color: white; border: 1px solid var(--glass-border);">
+                            <option value="">Todos los Personajes</option>
+                        </select>
+                        <select id="gear-cat-filter" onchange="renderGearView()" style="padding: 0.5rem 1rem; border-radius: 8px; background: rgba(15,23,42,0.6); color: white; border: 1px solid var(--glass-border);">
+                            <option value="">Todas las Categorías</option>
+                            <option value="Combat">Combate</option>
+                            <option value="Fashion">Fashion / Cosméticos</option>
+                        </select>
+                        <input type="text" id="gear-search" placeholder="Buscar ítem o set..." oninput="renderGearView()" style="padding: 0.5rem 1rem; border-radius: 8px; background: rgba(0,0,0,0.3); color: white; border: 1px solid var(--glass-border);">
+                        <button class="btn-primary" onclick="openGearModal()">
+                            <i class="fa-solid fa-plus"></i> Nuevo Equipamiento
+                        </button>
+                    </div>
+                </header>
+
+                <div class="card-grid" id="gear-grid">
+                    <!-- Gear cards populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Daily/Weekly Routines View -->
+            <div id="routines-view" class="view-section">
+                <header style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <h2>Rutinas Diarias y Semanales</h2>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <select id="routines-char-filter" onchange="renderRoutinesView()" style="padding: 0.5rem 1rem; border-radius: 8px; background: rgba(15,23,42,0.6); color: white; border: 1px solid var(--glass-border);">
+                            <option value="">Todos los Personajes</option>
+                        </select>
+                        <button class="btn-primary" onclick="openRoutineModal()">
+                            <i class="fa-solid fa-plus"></i> Nueva Rutina
+                        </button>
+                    </div>
+                </header>
+
+                <div id="routines-container" style="display: flex; flex-direction: column; gap: 15px;">
+                    <!-- Routine cards populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Expiring Items View -->
+            <div id="expiring-view" class="view-section">
+                <header style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <h2>Ítems por Expire (VIP / Pets / Pases)</h2>
+                    <button class="btn-primary" onclick="openExpiringModal()">
+                        <i class="fa-solid fa-plus"></i> Registrar Ítem Temporal
+                    </button>
+                </header>
+
+                <div class="card-grid" id="expiring-grid">
+                    <!-- Expiring item cards populated dynamically -->
                 </div>
             </div>
 
@@ -928,6 +739,18 @@
                 </div>
             </div>
 
+            <hr style="border:0; border-top:1px solid rgba(255,255,255,0.1); margin: 15px 0;">
+
+            <div class="form-group">
+                <label>Copias de Seguridad (Excel Backups)</label>
+                <button type="button" class="btn-primary" onclick="createExcelBackup()" style="width:100%; margin-bottom:10px;">
+                    <i class="fa-solid fa-cloud-arrow-down"></i> Crear Copia de Seguridad Ahora
+                </button>
+                <div id="backups-list" style="max-height: 140px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 8px; padding: 8px; font-size: 0.8rem; display: flex; flex-direction: column; gap: 6px;">
+                    <!-- Backups populated dynamically -->
+                </div>
+            </div>
+
             <div class="modal-actions">
                 <button type="button" class="btn-secondary" onclick="closeConfigModal()"
                     data-i18n="modal_close">Close</button>
@@ -1017,7 +840,6 @@
                 <div id="loginzone-chars-checklist" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--glass-border); border-radius: 8px; padding: 10px; background: rgba(0,0,0,0.2); display: flex; flex-direction: column; gap: 8px; margin-top: 5px;">
                     <!-- Checklist of characters populated dynamically -->
                 </div>
-            </div>
             <div class="modal-actions">
                 <button type="button" class="btn-secondary" onclick="closeLoginZoneModal()" data-i18n="modal_cancel">Cancelar</button>
                 <button type="button" class="btn-primary" onclick="submitLoginZone()" data-i18n="modal_save">Guardar</button>
@@ -1025,13 +847,282 @@
         </div>
     </div>
 
+    <!-- Gear Modal (Flyff Inventory Grid Redesign) -->
+    <div id="gear-modal" class="modal">
+        <div class="modal-content glass-panel" style="max-width: 850px; width: 95%;">
+            <span class="close" onclick="closeGearModal()">&times;</span>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:15px; border-bottom:1px solid var(--glass-border); padding-bottom:10px;">
+                <h2 id="gear-modal-title" style="margin:0;"><i class="fa-solid fa-shield-halved" style="color:var(--primary);"></i> Inventario de Equipamiento</h2>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <label style="font-weight:600; font-size:0.9rem;">Personaje:</label>
+                    <select id="gear-char-select" onchange="onGearCharSelectChange(this.value)" style="padding:0.4rem 0.8rem; background:rgba(15,23,42,0.8); border:1px solid var(--glass-border); border-radius:8px; color:white; font-weight:bold;">
+                        <!-- Characters populated dynamically -->
+                    </select>
+                </div>
+            </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DDSLoader.js"></script>
+            <input type="hidden" id="gear-id-input">
+            <input type="hidden" id="gear-selected-slot" value="weapon">
+
+            <div class="flyff-inventory-modal-body" style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+                
+                <!-- Left Column: Visual Flyff Inventory Window -->
+                <div class="flyff-inventory-container glass-panel" style="padding:15px; background:rgba(15,23,42,0.5); border-radius:12px; border:1px solid rgba(255,255,255,0.1);">
+                    <div style="text-align:center; font-weight:700; font-size:0.85rem; letter-spacing:1px; color:var(--primary); text-transform:uppercase; margin-bottom:10px;">
+                        <i class="fa-solid fa-box-archive"></i> Equipamiento Flyff
+                    </div>
+
+                    <!-- Top Row: Jewelry (Ring1, Earring1, Necklace, Earring2, Ring2) -->
+                    <div class="flyff-grid-row-top" style="display:flex; justify-content:center; gap:6px; margin-bottom:12px;">
+                        <button type="button" class="flyff-slot" data-slot="jewelry_ring1" onclick="selectFlyffSlot('jewelry_ring1')" title="Anillo 1">
+                            <span class="slot-icon">💍</span>
+                            <span class="slot-label">Anillo 1</span>
+                            <span class="slot-item-name" id="slot-name-jewelry_ring1">Vacio</span>
+                        </button>
+                        <button type="button" class="flyff-slot" data-slot="jewelry_earring1" onclick="selectFlyffSlot('jewelry_earring1')" title="Pendiente 1">
+                            <span class="slot-icon">👂</span>
+                            <span class="slot-label">Pendiente 1</span>
+                            <span class="slot-item-name" id="slot-name-jewelry_earring1">Vacio</span>
+                        </button>
+                        <button type="button" class="flyff-slot" data-slot="jewelry_necklace" onclick="selectFlyffSlot('jewelry_necklace')" title="Collar">
+                            <span class="slot-icon">📿</span>
+                            <span class="slot-label">Collar</span>
+                            <span class="slot-item-name" id="slot-name-jewelry_necklace">Vacio</span>
+                        </button>
+                        <button type="button" class="flyff-slot" data-slot="jewelry_earring2" onclick="selectFlyffSlot('jewelry_earring2')" title="Pendiente 2">
+                            <span class="slot-icon">👂</span>
+                            <span class="slot-label">Pendiente 2</span>
+                            <span class="slot-item-name" id="slot-name-jewelry_earring2">Vacio</span>
+                        </button>
+                        <button type="button" class="flyff-slot" data-slot="jewelry_ring2" onclick="selectFlyffSlot('jewelry_ring2')" title="Anillo 2">
+                            <span class="slot-icon">💍</span>
+                            <span class="slot-label">Anillo 2</span>
+                            <span class="slot-item-name" id="slot-name-jewelry_ring2">Vacio</span>
+                        </button>
+                    </div>
+
+                    <!-- Middle Section: Main Combat & Armor -->
+                    <div class="flyff-grid-middle" style="display:grid; grid-template-columns: 80px 1fr 80px; gap:10px; align-items:center; margin-bottom:12px;">
+                        
+                        <!-- Left Column (3 slots: Weapon, Shield, Cloak) -->
+                        <div style="display:flex; flex-direction:column; gap:8px;">
+                            <button type="button" class="flyff-slot" data-slot="weapon" onclick="selectFlyffSlot('weapon')" title="Arma Principal">
+                                <span class="slot-icon">⚔️</span>
+                                <span class="slot-label">Arma</span>
+                                <span class="slot-item-name" id="slot-name-weapon">Vacio</span>
+                            </button>
+                            <button type="button" class="flyff-slot" data-slot="shield" onclick="selectFlyffSlot('shield')" title="Escudo / Sec.">
+                                <span class="slot-icon">🛡️</span>
+                                <span class="slot-label">Escudo</span>
+                                <span class="slot-item-name" id="slot-name-shield">Vacio</span>
+                            </button>
+                            <button type="button" class="flyff-slot" data-slot="cloak" onclick="selectFlyffSlot('cloak')" title="Capa / Alas">
+                                <span class="slot-icon">🦹</span>
+                                <span class="slot-label">Capa</span>
+                                <span class="slot-item-name" id="slot-name-cloak">Vacio</span>
+                            </button>
+                        </div>
+
+                        <!-- Center Avatar Silhouette -->
+                        <div class="flyff-avatar-placeholder" style="height:170px; background:radial-gradient(circle, rgba(99,102,241,0.15) 0%, rgba(0,0,0,0.4) 100%); border:1px solid rgba(255,255,255,0.08); border-radius:10px; display:flex; flex-direction:column; align-items:center; justify-content:center; opacity:0.85;">
+                            <i class="fa-solid fa-user-astronaut" style="font-size:3.5rem; color:var(--primary); margin-bottom:8px;"></i>
+                            <span id="flyff-avatar-char-name" style="font-weight:700; font-size:0.85rem; color:white;">Personaje</span>
+                        </div>
+
+                        <!-- Right Column (4 slots: Suit Head, Suit Body, Suit Gloves, Suit Shoes) -->
+                        <div style="display:flex; flex-direction:column; gap:8px;">
+                            <button type="button" class="flyff-slot" data-slot="suit_head" onclick="selectFlyffSlot('suit_head')" title="Casco / Cabeza">
+                                <span class="slot-icon">🪖</span>
+                                <span class="slot-label">Casco</span>
+                                <span class="slot-item-name" id="slot-name-suit_head">Vacio</span>
+                            </button>
+                            <button type="button" class="flyff-slot" data-slot="suit_body" onclick="selectFlyffSlot('suit_body')" title="Pecho / Pechera">
+                                <span class="slot-icon">🥋</span>
+                                <span class="slot-label">Torso</span>
+                                <span class="slot-item-name" id="slot-name-suit_body">Vacio</span>
+                            </button>
+                            <button type="button" class="flyff-slot" data-slot="suit_gloves" onclick="selectFlyffSlot('suit_gloves')" title="Guantes">
+                                <span class="slot-icon">🥊</span>
+                                <span class="slot-label">Guantes</span>
+                                <span class="slot-item-name" id="slot-name-suit_gloves">Vacio</span>
+                            </button>
+                            <button type="button" class="flyff-slot" data-slot="suit_shoes" onclick="selectFlyffSlot('suit_shoes')" title="Botas / Calzado">
+                                <span class="slot-icon">🥾</span>
+                                <span class="slot-label">Botas</span>
+                                <span class="slot-item-name" id="slot-name-suit_shoes">Vacio</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Row: Fashion Set (Fashion Head, Suit, Gloves, Shoes) -->
+                    <div style="border-top:1px dashed rgba(255,255,255,0.1); padding-top:8px;">
+                        <div style="text-align:center; font-size:0.75rem; color:#ec4899; font-weight:700; text-transform:uppercase; margin-bottom:6px;">
+                            <i class="fa-solid fa-shirt"></i> Set Fashion
+                        </div>
+                        <div class="flyff-grid-row-fashion" style="display:flex; justify-content:center; gap:6px;">
+                            <button type="button" class="flyff-slot fashion" data-slot="fashion_head" onclick="selectFlyffSlot('fashion_head')" title="Gorro Fashion">
+                                <span class="slot-icon">🎩</span>
+                                <span class="slot-label">Fashion Head</span>
+                                <span class="slot-item-name" id="slot-name-fashion_head">Vacio</span>
+                            </button>
+                            <button type="button" class="flyff-slot fashion" data-slot="fashion_suit" onclick="selectFlyffSlot('fashion_suit')" title="Traje Fashion">
+                                <span class="slot-icon">👗</span>
+                                <span class="slot-label">Fashion Suit</span>
+                                <span class="slot-item-name" id="slot-name-fashion_suit">Vacio</span>
+                            </button>
+                            <button type="button" class="flyff-slot fashion" data-slot="fashion_gloves" onclick="selectFlyffSlot('fashion_gloves')" title="Guantes Fashion">
+                                <span class="slot-icon">🧤</span>
+                                <span class="slot-label">Fashion Gloves</span>
+                                <span class="slot-item-name" id="slot-name-fashion_gloves">Vacio</span>
+                            </button>
+                            <button type="button" class="flyff-slot fashion" data-slot="fashion_shoes" onclick="selectFlyffSlot('fashion_shoes')" title="Botas Fashion">
+                                <span class="slot-icon">👠</span>
+                                <span class="slot-label">Fashion Shoes</span>
+                                <span class="slot-item-name" id="slot-name-fashion_shoes">Vacio</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Slot Inspector & Attribute Modifier Form -->
+                <div class="flyff-inspector-container glass-panel" style="padding:15px; background:rgba(15,23,42,0.7); border-radius:12px; display:flex; flex-direction:column; justify-content:space-between;">
+                    <div>
+                        <!-- Header for Selected Slot -->
+                        <div style="border-bottom:1px solid var(--glass-border); padding-bottom:8px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+                            <h3 id="selected-slot-title" style="margin:0; color:var(--primary); font-size:1.1rem;">Arma Principal</h3>
+                            <span id="selected-slot-badge" style="background:var(--primary); color:#000; font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px; text-transform:uppercase;">Combat</span>
+                        </div>
+
+                        <!-- Item Select from Catalog -->
+                        <div class="form-group" style="margin-bottom:12px;">
+                            <label style="font-size:0.85rem; color:rgba(255,255,255,0.8); margin-bottom:4px; display:block;">Ítem del Juego (Catálogo Oficial)</label>
+                            <select id="gear-name-select" style="width:100%; padding:0.6rem; background:rgba(0,0,0,0.4); border:1px solid var(--glass-border); border-radius:8px; color:white; font-weight:600;">
+                                <!-- Items populated dynamically -->
+                            </select>
+                        </div>
+
+                        <!-- Attributes Panel -->
+                        <div id="gear-attributes-panel" style="display:flex; flex-direction:column; gap:10px;">
+                            <div style="display:flex; gap:10px;">
+                                <div class="form-group" style="flex:1;">
+                                    <label style="font-size:0.8rem; opacity:0.8;">Refinado / Upgrade</label>
+                                    <select id="gear-refine-select" style="width:100%; padding:0.5rem; background:rgba(0,0,0,0.4); border:1px solid var(--glass-border); border-radius:6px; color:white;">
+                                        <!-- Refines +0 to +20 -->
+                                    </select>
+                                </div>
+                                <div class="form-group" style="flex:1;">
+                                    <label style="font-size:0.8rem; opacity:0.8;">Elemento</label>
+                                    <select id="gear-element-select" style="width:100%; padding:0.5rem; background:rgba(0,0,0,0.4); border:1px solid var(--glass-border); border-radius:6px; color:white;">
+                                        <!-- Elements -->
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label style="font-size:0.8rem; opacity:0.8;">Perforaciones (Piercings)</label>
+                                <select id="gear-card-select" style="width:100%; padding:0.5rem; background:rgba(0,0,0,0.4); border:1px solid var(--glass-border); border-radius:6px; color:white;">
+                                    <!-- Piercings 0/4 to 4/4 -->
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label style="font-size:0.8rem; opacity:0.8;">Nota / Observación</label>
+                                <input type="text" id="gear-note-input" placeholder="ej. Prestado a Juan" style="width:100%; padding:0.5rem; background:rgba(0,0,0,0.4); border:1px solid var(--glass-border); border-radius:6px; color:white;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Modal Actions -->
+                    <div style="display:flex; justify-content:space-between; gap:10px; margin-top:15px; border-top:1px solid var(--glass-border); padding-top:12px;">
+                        <button type="button" class="btn-secondary" style="color:var(--danger); border-color:rgba(239,68,68,0.3);" onclick="unequipCurrentSlot()">
+                            <i class="fa-solid fa-trash-can"></i> Desequipar
+                        </button>
+                        <div style="display:flex; gap:8px;">
+                            <button type="button" class="btn-secondary" onclick="closeGearModal()">Cerrar</button>
+                            <button type="button" class="btn-primary" onclick="submitGearForm()">
+                                <i class="fa-solid fa-floppy-disk"></i> Guardar Slot
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Routine Task Modal -->
+    <div id="routine-modal" class="modal">
+        <div class="modal-content glass-panel" style="max-width: 400px;">
+            <span class="close" onclick="closeRoutineModal()">&times;</span>
+            <h2>Nueva Rutina</h2>
+            <div class="form-group">
+                <label>Título de la Tarea</label>
+                <input type="text" id="rt-title-input" placeholder="ej. Colosseum diario" required>
+            </div>
+            <div class="form-group" style="margin-top:10px;">
+                <label>Frecuencia</label>
+                <select id="rt-freq-select" style="width:100%; padding:0.6rem; background:rgba(15,23,42,0.6); border:1px solid var(--glass-border); border-radius:8px; color:white;">
+                    <option value="daily">Diaria (Reset cada 24h)</option>
+                    <option value="weekly">Semanal</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin-top:10px;">
+                <label>Categoría</label>
+                <input type="text" id="rt-cat-input" placeholder="ej. Instancias, Recompensas, Gremio">
+            </div>
+            <div class="modal-actions" style="margin-top:15px;">
+                <button type="button" class="btn-secondary" onclick="closeRoutineModal()">Cancelar</button>
+                <button type="button" class="btn-primary" onclick="submitRoutineTask()">Crear</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Expiring Item Modal -->
+    <div id="expiring-modal" class="modal">
+        <div class="modal-content glass-panel" style="max-width: 450px;">
+            <span class="close" onclick="closeExpiringModal()">&times;</span>
+            <h2 id="expiring-modal-title">Registrar Ítem Temporal</h2>
+            <input type="hidden" id="expiring-id-input">
+            
+            <div class="form-group">
+                <label>Personaje Asignado</label>
+                <select id="expiring-char-select" style="width:100%; padding:0.6rem; background:rgba(15,23,42,0.6); border:1px solid var(--glass-border); border-radius:8px; color:white;">
+                    <!-- Characters -->
+                </select>
+            </div>
+
+            <div class="form-group" style="margin-top:10px;">
+                <label>Nombre del Ítem</label>
+                <input type="text" id="expiring-name-input" placeholder="ej. Ticket Azria 7 Días, Pet Pickup, Scroll Exp" required>
+            </div>
+
+            <div class="form-group" style="margin-top:10px;">
+                <label>Categoría</label>
+                <select id="expiring-cat-select" style="width:100%; padding:0.6rem; background:rgba(15,23,42,0.6); border:1px solid var(--glass-border); border-radius:8px; color:white;">
+                    <option value="Ticket VIP">Ticket Area VIP (Azria / Coral)</option>
+                    <option value="Mascota / Pet">Mascota / Pet Recolección</option>
+                    <option value="Consumible / Scroll">Pergamino / Consumible</option>
+                    <option value="Otro">Otro Ítem Temporal</option>
+                </select>
+            </div>
+
+            <div class="form-group" style="margin-top:10px;">
+                <label>Fecha y Hora de Expiración</label>
+                <input type="datetime-local" id="expiring-date-input" required style="width:100%; padding:0.6rem; background:rgba(15,23,42,0.6); border:1px solid var(--glass-border); border-radius:8px; color:white;">
+            </div>
+
+            <div class="form-group" style="margin-top:10px;">
+                <label>Nota / Observación</label>
+                <input type="text" id="expiring-note-input" placeholder="ej. Usar antes de levear en equipo">
+            </div>
+
+            <div class="modal-actions" style="margin-top:15px;">
+                <button type="button" class="btn-secondary" onclick="closeExpiringModal()">Cancelar</button>
+                <button type="button" class="btn-primary" onclick="submitExpiringForm()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
     <script src="app.js"></script>
-    <script src="fashion.js"></script>
 </body>
 </html>

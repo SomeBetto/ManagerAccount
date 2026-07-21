@@ -141,3 +141,34 @@ def browse_exe_path():
         current_app.logger.error(str(e), exc_info=True)
         print(f"Error abriendo explorador de archivos: {e}")
         return jsonify({'error': 'La ventana de carpetas no es compatible con entornos Docker o Linux Headless. Por favor escribe la ruta manualmente.'}), 400
+
+@bp.route('/backups', methods=['GET'])
+def get_backups():
+    try:
+        from app.excel_db import ExcelDB
+        return jsonify(ExcelDB.list_backups())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@bp.route('/backups/create', methods=['POST'])
+def create_backup():
+    try:
+        from app.excel_db import ExcelDB
+        res = ExcelDB.create_backup()
+        return jsonify(res), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@bp.route('/backups/restore', methods=['POST'])
+def restore_backup():
+    try:
+        data = request.json or {}
+        filename = data.get('filename')
+        if not filename:
+            return jsonify({'error': 'filename is required'}), 400
+        from app.excel_db import ExcelDB
+        res = ExcelDB.restore_backup(filename)
+        return jsonify(res)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+

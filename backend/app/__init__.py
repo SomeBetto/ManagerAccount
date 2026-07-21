@@ -16,7 +16,7 @@ def create_app(config_class=Config):
     cors.init_app(app)
 
     # Register Blueprints
-    from .routes import accounts_bp, characters_bp, leveling_bp, events_bp, items_bp, config_bp, coupons_bp, fashion_bp, autotool_bp
+    from .routes import accounts_bp, characters_bp, leveling_bp, events_bp, items_bp, config_bp, coupons_bp, autotool_bp, gear_bp, routines_bp, expiring_bp
     
     app.register_blueprint(accounts_bp)
     app.register_blueprint(characters_bp)
@@ -25,8 +25,10 @@ def create_app(config_class=Config):
     app.register_blueprint(items_bp)
     app.register_blueprint(config_bp)
     app.register_blueprint(coupons_bp)
-    app.register_blueprint(fashion_bp)
     app.register_blueprint(autotool_bp)
+    app.register_blueprint(gear_bp)
+    app.register_blueprint(routines_bp)
+    app.register_blueprint(expiring_bp)
 
     # Root Routes (Static Files)
     @app.route('/')

@@ -13,7 +13,12 @@ SCHEMA = {
     'daily_event_participants': ['id', 'event_id', 'character_id'],
     'daily_event_progress': ['id', 'participant_id', 'event_date', 'is_completed'],
     'coupons': ['id', 'code', 'name', 'description'],
-    'coupon_redemptions': ['id', 'coupon_id', 'account_id', 'character_id', 'date']
+    'coupon_redemptions': ['id', 'coupon_id', 'account_id', 'character_id', 'date'],
+    'character_gear': ['id', 'character_id', 'gear_category', 'slot', 'item_name', 'refine_level', 'element', 'card_pierce', 'awakening', 'note'],
+    'routine_tasks': ['id', 'title', 'frequency', 'category'],
+    'routine_progress': ['id', 'task_id', 'character_id', 'completed_date', 'is_completed'],
+    'expiring_items': ['id', 'character_id', 'account_id', 'item_name', 'item_category', 'expiration_date', 'note'],
+    'account_sharing': ['id', 'account_id', 'status', 'borrowed_to', 'notes', 'tags']
 }
 
 HEADER_ALIASES = {
@@ -39,7 +44,20 @@ HEADER_ALIASES = {
     'is_completed': ['is_completed', 'completado', 'listo', 'done', 'terminado'],
     'code': ['code', 'codigo', 'cod', 'coupon_code', 'cupon'],
     'coupon_id': ['coupon_id', 'id_cupon', 'cupon_id', 'ref_cupon'],
-    'date': ['date', 'fecha', 'creado', 'dia', 'timestamp']
+    'date': ['date', 'fecha', 'creado', 'dia', 'timestamp'],
+    'gear_category': ['gear_category', 'categoria_gear', 'categoria gear', 'category'],
+    'slot': ['slot', 'ranura', 'posicion', 'lugar'],
+    'item_name': ['item_name', 'nombre_item', 'nombre item', 'item'],
+    'refine_level': ['refine_level', 'nivel_refinado', 'refine', 'upgrade', 'mejora'],
+    'element': ['element', 'elemento', 'atributo'],
+    'card_pierce': ['card_pierce', 'piercing', 'cartas', 'card'],
+    'awakening': ['awakening', 'awk', 'despertar', 'awakening_stat'],
+    'frequency': ['frequency', 'frecuencia', 'periodo'],
+    'completed_date': ['completed_date', 'fecha_completado', 'fecha completado'],
+    'expiration_date': ['expiration_date', 'fecha_expiracion', 'vencimiento', 'expira'],
+    'borrowed_to': ['borrowed_to', 'prestado_a', 'prestado a', 'responsable'],
+    'status': ['status', 'estado', 'disponibilidad'],
+    'tags': ['tags', 'etiquetas', 'etiqueta']
 }
 
 def get_excel_path():
@@ -460,3 +478,58 @@ class ExcelDB:
                     values.append(s_val)
                     
         return sorted(values)
+
+    @classmethod
+    def get_backups_dir(cls):
+        path = get_excel_path()
+        if path:
+            base_dir = os.path.dirname(os.path.abspath(path))
+        else:
+            base_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'backups')
+        backup_dir = os.path.join(base_dir, 'backups')
+        if not os.path.exists(backup_dir):
+            os.makedirs(backup_dir)
+        return backup_dir
+
+    @classmethod
+    def create_backup(cls):
+        path = get_excel_path()
+        if not path or not os.path.exists(path):
+            raise Exception("Excel path not set or file does not exist.")
+        import shutil, datetime
+        backup_dir = cls.get_backups_dir()
+        filename = f"backup_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        backup_path = os.path.join(backup_dir, filename)
+        shutil.copy2(path, backup_path)
+        return {"filename": filename, "path": backup_path, "created_at": datetime.datetime.now().isoformat()}
+
+    @classmethod
+    def list_backups(cls):
+        backup_dir = cls.get_backups_dir()
+        files = []
+        if os.path.exists(backup_dir):
+            for f in os.listdir(backup_dir):
+                if f.endswith('.xlsx'):
+                    fp = os.path.join(backup_dir, f)
+                    stat = os.stat(fp)
+                    files.append({
+                        "filename": f,
+                        "size": stat.st_size,
+                        "modified": stat.st_mtime
+                    })
+        files.sort(key=lambda x: x["modified"], reverse=True)
+        return files
+
+    @classmethod
+    def restore_backup(cls, filename):
+        backup_dir = cls.get_backups_dir()
+        backup_path = os.path.join(backup_dir, filename)
+        excel_path = get_excel_path()
+        if not os.path.exists(backup_path):
+            raise Exception("Backup file not found.")
+        if not excel_path:
+            raise Exception("Target Excel path not configured.")
+        import shutil
+        shutil.copy2(backup_path, excel_path)
+        return {"status": "success", "restored": filename}
+

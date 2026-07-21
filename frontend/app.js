@@ -430,6 +430,21 @@ function switchView(view) {
         pageTitle.innerHTML = i18n('sidebar_autotool');
         fetchAutoToolStatus();
         autotoolInterval = setInterval(fetchAutoToolStatus, 2000);
+    } else if (view === 'gear') {
+        const gearView = document.getElementById('gear-view');
+        if (gearView) gearView.classList.add('active');
+        pageTitle.innerHTML = i18n('sidebar_gear') || 'Equipamiento & Fashion';
+        fetchGearData();
+    } else if (view === 'routines') {
+        const routinesView = document.getElementById('routines-view');
+        if (routinesView) routinesView.classList.add('active');
+        pageTitle.innerHTML = i18n('sidebar_routines') || 'Rutinas Diarias';
+        fetchRoutinesData();
+    } else if (view === 'expiring') {
+        const expiringView = document.getElementById('expiring-view');
+        if (expiringView) expiringView.classList.add('active');
+        pageTitle.innerHTML = i18n('sidebar_expiring') || 'Ítems por Expire';
+        fetchExpiringData();
     }
     updateHeaderButtons(view);
 }
@@ -3201,3 +3216,752 @@ function updateAutoToolUI(data) {
         }
     }
 }
+
+/* ==========================================================================
+   FEATURE 1: GEAR & FASHION TRACKER (FLYFF INVENTORY GRID REDESIGN)
+   ========================================================================== */
+let gearCatalog = null;
+let characterGear = [];
+
+const FLYFF_SLOT_LABELS = {
+    jewelry_ring1: 'Anillo 1',
+    jewelry_earring1: 'Pendiente 1',
+    jewelry_necklace: 'Collar',
+    jewelry_earring2: 'Pendiente 2',
+    jewelry_ring2: 'Anillo 2',
+    weapon: 'Arma Principal',
+    shield: 'Escudo / Secundario',
+    cloak: 'Capa / Alas',
+    suit_head: 'Casco / Cabeza',
+    suit_body: 'Torso / Pecho',
+    suit_gloves: 'Guantes',
+    suit_shoes: 'Botas / Calzado',
+    fashion_head: 'Gorro Fashion',
+    fashion_suit: 'Traje Fashion',
+    fashion_gloves: 'Guantes Fashion',
+    fashion_shoes: 'Botas Fashion',
+    talisman: 'Talismán'
+};
+
+async function fetchGearData() {
+    try {
+        if (!gearCatalog) {
+            const catRes = await fetch(`${API_URL}/gear/catalog`);
+            gearCatalog = await catRes.json();
+        }
+        const gearRes = await fetch(`${API_URL}/gear`);
+        characterGear = await gearRes.json();
+        populateGearFilters();
+        renderGearView();
+    } catch (e) {
+        console.error('Error fetching gear data:', e);
+    }
+}
+
+function populateGearFilters() {
+    const charSelect = document.getElementById('gear-char-filter');
+    if (charSelect) {
+        let html = '<option value="">Todos los Personajes</option>';
+        characters.forEach(c => {
+            html += `<option value="${c.id}">${c.name} (Lvl ${c.level} ${c.class_name || ''})</option>`;
+        });
+        charSelect.innerHTML = html;
+    }
+}
+
+async function openGearModal(gearItemOrCharId = null) {
+    const modal = document.getElementById('gear-modal');
+    if (!modal) return;
+
+    try {
+        if (!characters || characters.length === 0) {
+            await fetchCharacters();
+        }
+        if (!gearCatalog) {
+            const catRes = await fetch(`${API_URL}/gear/catalog`);
+            gearCatalog = await catRes.json();
+        }
+        if (!characterGear) {
+            const gearRes = await fetch(`${API_URL}/gear`);
+            characterGear = await gearRes.json();
+        }
+    } catch (e) {
+        console.error('Error fetching gear data for modal:', e);
+    }
+
+    if (!characterGear) characterGear = [];
+
+    const charSelect = document.getElementById('gear-char-select');
+    if (charSelect) {
+        let charHtml = '';
+        characters.forEach(c => {
+            charHtml += `<option value="${c.id}">${c.name} (${c.class_name || 'Sin clase'})</option>`;
+        });
+        charSelect.innerHTML = charHtml || '<option value="">(Sin personajes)</option>';
+    }
+
+    populateGearCombos();
+
+    let targetCharId = characters.length > 0 ? characters[0].id : null;
+    let initialSlot = 'weapon';
+
+    if (gearItemOrCharId && typeof gearItemOrCharId === 'object') {
+        targetCharId = gearItemOrCharId.character_id;
+        initialSlot = gearItemOrCharId.slot || 'weapon';
+    } else if (gearItemOrCharId) {
+        targetCharId = gearItemOrCharId;
+    }
+
+    if (targetCharId && charSelect) {
+        charSelect.value = targetCharId;
+    }
+
+    onGearCharSelectChange(targetCharId, initialSlot);
+    modal.classList.add('show');
+}
+
+function openGearModalForChar(charId) {
+    openGearModal(charId);
+}
+
+function closeGearModal() {
+    const modal = document.getElementById('gear-modal');
+    if (modal) modal.classList.remove('show');
+}
+
+function populateGearCombos() {
+    if (!gearCatalog) return;
+    const refineSelect = document.getElementById('gear-refine-select');
+    const elemSelect = document.getElementById('gear-element-select');
+    const cardSelect = document.getElementById('gear-card-select');
+
+    if (refineSelect) {
+        refineSelect.innerHTML = (gearCatalog.refines || []).map(r => `<option value="${r}">${r}</option>`).join('');
+    }
+    if (elemSelect) {
+        elemSelect.innerHTML = (gearCatalog.elements || []).map(e => `<option value="${e}">${e}</option>`).join('');
+    }
+    if (cardSelect) {
+        cardSelect.innerHTML = (gearCatalog.piercings || []).map(c => `<option value="${c}">${c}</option>`).join('');
+    }
+}
+
+function onGearCharSelectChange(charId, slotToSelect = null) {
+    const char = characters.find(c => String(c.id) === String(charId));
+    const avatarNameEl = document.getElementById('flyff-avatar-char-name');
+    if (avatarNameEl) {
+        avatarNameEl.innerText = char ? char.name : 'Personaje';
+    }
+
+    refreshFlyffSlotLabels(charId);
+
+    const currentActiveSlot = slotToSelect || document.getElementById('gear-selected-slot')?.value || 'weapon';
+    selectFlyffSlot(currentActiveSlot);
+}
+
+function refreshFlyffSlotLabels(charId) {
+    const safeGear = characterGear || [];
+    const charItems = safeGear.filter(g => String(g.character_id) === String(charId));
+    
+    Object.keys(FLYFF_SLOT_LABELS).forEach(slotKey => {
+        const slotBtn = document.querySelector(`.flyff-slot[data-slot="${slotKey}"]`);
+        const nameEl = document.getElementById(`slot-name-${slotKey}`);
+        const equipped = charItems.find(g => g.slot === slotKey);
+
+        if (slotBtn) {
+            if (equipped) {
+                slotBtn.classList.add('equipped');
+                if (nameEl) nameEl.innerText = equipped.item_name;
+            } else {
+                slotBtn.classList.remove('equipped');
+                if (nameEl) nameEl.innerText = 'Vacio';
+            }
+        }
+    });
+}
+
+function selectFlyffSlot(slotKey) {
+    document.querySelectorAll('.flyff-slot').forEach(btn => btn.classList.remove('active'));
+    const targetBtn = document.querySelector(`.flyff-slot[data-slot="${slotKey}"]`);
+    if (targetBtn) targetBtn.classList.add('active');
+
+    document.getElementById('gear-selected-slot').value = slotKey;
+
+    const isFashion = slotKey.startsWith('fashion_');
+    const category = isFashion ? 'Fashion' : 'Combat';
+    const slotTitle = FLYFF_SLOT_LABELS[slotKey] || slotKey;
+
+    const titleEl = document.getElementById('selected-slot-title');
+    const badgeEl = document.getElementById('selected-slot-badge');
+
+    if (titleEl) titleEl.innerText = slotTitle;
+    if (badgeEl) {
+        badgeEl.innerText = category;
+        badgeEl.style.background = isFashion ? '#ec4899' : 'var(--primary)';
+    }
+
+    const nameSelect = document.getElementById('gear-name-select');
+    let catalogItems = (gearCatalog && gearCatalog.categories) ? (gearCatalog.categories[slotKey] || []) : [];
+    
+    if (catalogItems.length === 0) {
+        catalogItems = ['Item Estándar'];
+    }
+
+    nameSelect.innerHTML = catalogItems.map(item => `<option value="${item}">${item}</option>`).join('');
+
+    const safeGear = characterGear || [];
+    const currentCharId = document.getElementById('gear-char-select')?.value;
+    const equipped = safeGear.find(g => String(g.character_id) === String(currentCharId) && g.slot === slotKey);
+
+    const idInput = document.getElementById('gear-id-input');
+    const refineSelect = document.getElementById('gear-refine-select');
+    const elemSelect = document.getElementById('gear-element-select');
+    const cardSelect = document.getElementById('gear-card-select');
+    const noteInput = document.getElementById('gear-note-input');
+
+    if (equipped) {
+        if (idInput) idInput.value = equipped.id;
+        if (nameSelect) nameSelect.value = equipped.item_name;
+        if (refineSelect) refineSelect.value = equipped.refine_level || '+0';
+        if (elemSelect) elemSelect.value = equipped.element || 'Ninguno';
+        if (cardSelect) cardSelect.value = equipped.card_pierce || 'Sin Piercings (0/4)';
+        if (noteInput) noteInput.value = equipped.note || '';
+    } else {
+        if (idInput) idInput.value = '';
+        if (refineSelect) refineSelect.value = '+0';
+        if (elemSelect) elemSelect.value = 'Ninguno';
+        if (cardSelect) cardSelect.value = 'Sin Piercings (0/4)';
+        if (noteInput) noteInput.value = '';
+    }
+}
+
+async function submitGearForm() {
+    const id = document.getElementById('gear-id-input').value;
+    const slotKey = document.getElementById('gear-selected-slot').value;
+    const charId = document.getElementById('gear-char-select').value;
+    const isFashion = slotKey.startsWith('fashion_');
+
+    const data = {
+        character_id: charId,
+        gear_category: isFashion ? 'Fashion' : 'Combat',
+        slot: slotKey,
+        item_name: document.getElementById('gear-name-select').value,
+        refine_level: document.getElementById('gear-refine-select').value,
+        element: document.getElementById('gear-element-select').value,
+        card_pierce: document.getElementById('gear-card-select').value,
+        note: document.getElementById('gear-note-input').value.trim()
+    };
+
+    const method = id ? 'PUT' : 'POST';
+    const url = id ? `${API_URL}/gear/${id}` : `${API_URL}/gear`;
+
+    try {
+        const res = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (res.ok) {
+            const savedItem = await res.json();
+            if (!id && savedItem && savedItem.id) {
+                document.getElementById('gear-id-input').value = savedItem.id;
+            }
+            await fetchGearData();
+            refreshFlyffSlotLabels(charId);
+            selectFlyffSlot(slotKey);
+        } else {
+            alert('Error al guardar equipamiento');
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function unequipCurrentSlot() {
+    const id = document.getElementById('gear-id-input').value;
+    const charId = document.getElementById('gear-char-select').value;
+    const slotKey = document.getElementById('gear-selected-slot').value;
+
+    if (!id) {
+        alert('Este slot ya está vacío.');
+        return;
+    }
+
+    if (!confirm('¿Desequipar este ítem?')) return;
+
+    try {
+        const res = await fetch(`${API_URL}/gear/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            await fetchGearData();
+            refreshFlyffSlotLabels(charId);
+            selectFlyffSlot(slotKey);
+        }
+    } catch (e) { console.error(e); }
+}
+
+async function deleteGearItem(id) {
+    if (!confirm(i18n('msg_confirm_delete'))) return;
+    try {
+        const res = await fetch(`${API_URL}/gear/${id}`, { method: 'DELETE' });
+        if (res.ok) fetchGearData();
+    } catch (e) { console.error(e); }
+}
+
+function renderGearView() {
+    const grid = document.getElementById('gear-grid');
+    if (!grid) return;
+
+    const charFilter = document.getElementById('gear-char-filter')?.value;
+    const catFilter = document.getElementById('gear-cat-filter')?.value;
+    const searchText = (document.getElementById('gear-search')?.value || '').toLowerCase().trim();
+
+    let filteredChars = characters;
+    if (charFilter) {
+        filteredChars = characters.filter(c => String(c.id) === String(charFilter));
+    }
+
+    let html = '';
+    filteredChars.forEach(char => {
+        let itemsForChar = (characterGear || []).filter(g => String(g.character_id) === String(char.id));
+        if (catFilter) {
+            itemsForChar = itemsForChar.filter(g => (g.gear_category || 'Combat') === catFilter);
+        }
+        if (searchText) {
+            itemsForChar = itemsForChar.filter(g => 
+                (g.item_name || '').toLowerCase().includes(searchText) ||
+                (g.slot || '').toLowerCase().includes(searchText) ||
+                (g.note || '').toLowerCase().includes(searchText)
+            );
+        }
+
+        if (itemsForChar.length > 0 || !searchText) {
+            html += `
+            <div class="card glass-panel" style="display:flex; flex-direction:column; gap:10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--glass-border); padding-bottom:8px;">
+                    <div>
+                        <h3 style="margin:0; color:var(--primary); font-size:1.1rem;">${char.name}</h3>
+                        <span style="font-size:0.8rem; opacity:0.7;">Lvl ${char.level} - ${char.class_name || 'Sin Clase'}</span>
+                    </div>
+                    <button class="btn-secondary" style="font-size:0.75rem; padding:4px 8px;" onclick="openGearModalForChar(${char.id})">
+                        <i class="fa-solid fa-pen-to-square"></i> Editar Equipamiento
+                    </button>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+            `;
+
+            if (itemsForChar.length === 0) {
+                html += `<p style="font-size:0.85rem; opacity:0.5; margin:5px 0;">Sin equipamiento registrado.</p>`;
+            } else {
+                itemsForChar.forEach(g => {
+                    const isFashion = g.gear_category === 'Fashion';
+                    const badgeColor = isFashion ? '#ec4899' : 'var(--primary)';
+                    const slotName = FLYFF_SLOT_LABELS[g.slot] || g.slot;
+
+                    html += `
+                    <div style="background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:8px 12px; display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="background:${badgeColor}; color:#000; font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px; text-transform:uppercase;">
+                                    ${slotName}
+                                </span>
+                                <strong style="color:white; font-size:0.95rem;">${g.item_name} ${g.refine_level && g.refine_level !== '+0' ? `<span style="color:#f59e0b;">(${g.refine_level})</span>` : ''}</strong>
+                            </div>
+                            <div style="font-size:0.8rem; opacity:0.8; margin-top:3px; display:flex; gap:10px; flex-wrap:wrap;">
+                                ${g.element && g.element !== 'Ninguno' ? `<span><i class="fa-solid fa-fire-flame-curved" style="color:#ef4444;"></i> ${g.element}</span>` : ''}
+                                ${g.card_pierce && !g.card_pierce.includes('Sin Piercings') && g.card_pierce !== 'Ninguna' ? `<span><i class="fa-solid fa-gem" style="color:#3b82f6;"></i> ${g.card_pierce}</span>` : ''}
+                                ${g.note ? `<span style="font-style:italic; opacity:0.7;">"${g.note}"</span>` : ''}
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:5px;">
+                            <button class="icon-btn" onclick='openGearModal(${JSON.stringify(g).replace(/'/g, "&apos;")})' title="Editar"><i class="fa-solid fa-pen"></i></button>
+                            <button class="icon-btn delete" onclick="deleteGearItem(${g.id})" title="Eliminar"><i class="fa-solid fa-trash-can"></i></button>
+                        </div>
+                    </div>
+                    `;
+                });
+            }
+
+            html += `</div></div>`;
+        }
+    });
+
+    grid.innerHTML = html || `<p style="grid-column: 1/-1; text-align:center; opacity:0.5;">No se encontraron ítems de equipamiento.</p>`;
+}
+
+
+/* ==========================================================================
+   FEATURE 2: DAILY/WEEKLY ROUTINES CHECKLIST
+   ========================================================================== */
+let routineTasks = [];
+let routineProgress = [];
+
+async function fetchRoutinesData() {
+    try {
+        const tasksRes = await fetch(`${API_URL}/routines/tasks`);
+        routineTasks = await tasksRes.json();
+        const progRes = await fetch(`${API_URL}/routines/progress`);
+        routineProgress = await progRes.json();
+        populateRoutinesFilters();
+        renderRoutinesView();
+    } catch (e) {
+        console.error('Error fetching routines data:', e);
+    }
+}
+
+function populateRoutinesFilters() {
+    const charSelect = document.getElementById('routines-char-filter');
+    if (charSelect) {
+        let html = '<option value="">Todos los Personajes</option>';
+        characters.forEach(c => {
+            html += `<option value="${c.id}">${c.name}</option>`;
+        });
+        charSelect.innerHTML = html;
+    }
+}
+
+function openRoutineModal() {
+    const modal = document.getElementById('routine-modal');
+    if (modal) {
+        document.getElementById('rt-title-input').value = '';
+        document.getElementById('rt-cat-input').value = '';
+        modal.classList.add('show');
+    }
+}
+
+function closeRoutineModal() {
+    const modal = document.getElementById('routine-modal');
+    if (modal) modal.classList.remove('show');
+}
+
+async function submitRoutineTask() {
+    const title = document.getElementById('rt-title-input').value.trim();
+    if (!title) return;
+
+    const data = {
+        title,
+        frequency: document.getElementById('rt-freq-select').value,
+        category: document.getElementById('rt-cat-input').value.trim() || 'General'
+    };
+
+    try {
+        const res = await fetch(`${API_URL}/routines/tasks`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (res.ok) {
+            closeRoutineModal();
+            fetchRoutinesData();
+        }
+    } catch (e) { console.error(e); }
+}
+
+async function deleteRoutineTask(taskId) {
+    if (!confirm(i18n('msg_confirm_delete'))) return;
+    try {
+        const res = await fetch(`${API_URL}/routines/tasks/${taskId}`, { method: 'DELETE' });
+        if (res.ok) fetchRoutinesData();
+    } catch (e) { console.error(e); }
+}
+
+async function toggleRoutineProgress(taskId, charId, isCompleted) {
+    const today = new Date().toISOString().split('T')[0];
+    try {
+        await fetch(`${API_URL}/routines/progress`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                task_id: taskId,
+                character_id: charId,
+                completed_date: today,
+                is_completed: isCompleted
+            })
+        });
+        const progRes = await fetch(`${API_URL}/routines/progress`);
+        routineProgress = await progRes.json();
+        renderRoutinesView();
+    } catch (e) { console.error(e); }
+}
+
+function renderRoutinesView() {
+    const container = document.getElementById('routines-container');
+    if (!container) return;
+
+    const charFilter = document.getElementById('routines-char-filter')?.value;
+    const today = new Date().toISOString().split('T')[0];
+
+    let targetChars = characters;
+    if (charFilter) {
+        targetChars = characters.filter(c => String(c.id) === String(charFilter));
+    }
+
+    let html = '';
+    routineTasks.forEach(task => {
+        html += `
+        <div class="card glass-panel" style="padding:15px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="background:var(--primary); color:#000; font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:4px; text-transform:uppercase;">
+                        ${task.frequency === 'daily' ? 'Diaria' : 'Semanal'}
+                    </span>
+                    <h3 style="margin:0; font-size:1.1rem; color:white;">${task.title}</h3>
+                    <span style="font-size:0.8rem; opacity:0.6; background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px;">${task.category || 'General'}</span>
+                </div>
+                <button class="icon-btn delete" onclick="deleteRoutineTask(${task.id})" title="Eliminar Rutina"><i class="fa-solid fa-trash-can"></i></button>
+            </div>
+            <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:10px;">
+        `;
+
+        targetChars.forEach(char => {
+            const isDone = routineProgress.some(p => 
+                String(p.task_id) === String(task.id) && 
+                String(p.character_id) === String(char.id) && 
+                p.completed_date === today && 
+                (p.is_completed === true || p.is_completed === 'true' || p.is_completed === 'True')
+            );
+
+            html += `
+            <label style="display:flex; align-items:center; gap:8px; background:rgba(0,0,0,0.3); padding:8px 12px; border-radius:8px; border:1px solid ${isDone ? 'var(--success)' : 'var(--glass-border)'}; cursor:pointer;">
+                <input type="checkbox" ${isDone ? 'checked' : ''} onchange="toggleRoutineProgress(${task.id}, ${char.id}, this.checked)" style="accent-color:var(--success); width:18px; height:18px; cursor:pointer;">
+                <span style="font-size:0.9rem; font-weight:600; color:${isDone ? 'var(--success)' : 'white'}; text-decoration:${isDone ? 'line-through' : 'none'};">
+                    ${char.name}
+                </span>
+            </label>
+            `;
+        });
+
+        html += `</div></div>`;
+    });
+
+    container.innerHTML = html || `<p style="text-align:center; opacity:0.5;">No hay rutinas creadas aún.</p>`;
+}
+
+
+/* ==========================================================================
+   FEATURE 3: EXPIRING ITEMS TRACKER
+   ========================================================================== */
+let expiringItems = [];
+
+async function fetchExpiringData() {
+    try {
+        const res = await fetch(`${API_URL}/expiring-items`);
+        expiringItems = await res.json();
+        renderExpiringView();
+    } catch (e) { console.error('Error fetching expiring items:', e); }
+}
+
+function openExpiringModal(item = null) {
+    const modal = document.getElementById('expiring-modal');
+    if (!modal) return;
+
+    const charSelect = document.getElementById('expiring-char-select');
+    let charHtml = '<option value="">(Sin asignar a personaje)</option>';
+    characters.forEach(c => {
+        charHtml += `<option value="${c.id}">${c.name} (Lvl ${c.level})</option>`;
+    });
+    charSelect.innerHTML = charHtml;
+
+    if (item) {
+        document.getElementById('expiring-modal-title').innerText = 'Editar Ítem Temporal';
+        document.getElementById('expiring-id-input').value = item.id;
+        document.getElementById('expiring-char-select').value = item.character_id || '';
+        document.getElementById('expiring-name-input').value = item.item_name;
+        document.getElementById('expiring-cat-select').value = item.item_category || 'Ticket VIP';
+        document.getElementById('expiring-date-input').value = item.expiration_date || '';
+        document.getElementById('expiring-note-input').value = item.note || '';
+    } else {
+        document.getElementById('expiring-modal-title').innerText = 'Registrar Ítem Temporal';
+        document.getElementById('expiring-id-input').value = '';
+        document.getElementById('expiring-name-input').value = '';
+        document.getElementById('expiring-note-input').value = '';
+        
+        const future = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        document.getElementById('expiring-date-input').value = future.toISOString().slice(0, 16);
+    }
+    modal.classList.add('show');
+}
+
+function closeExpiringModal() {
+    const modal = document.getElementById('expiring-modal');
+    if (modal) modal.classList.remove('show');
+}
+
+async function submitExpiringForm() {
+    const id = document.getElementById('expiring-id-input').value;
+    const name = document.getElementById('expiring-name-input').value.trim();
+    const expDate = document.getElementById('expiring-date-input').value;
+
+    if (!name || !expDate) return;
+
+    const data = {
+        character_id: document.getElementById('expiring-char-select').value || '',
+        item_name: name,
+        item_category: document.getElementById('expiring-cat-select').value,
+        expiration_date: expDate,
+        note: document.getElementById('expiring-note-input').value.trim()
+    };
+
+    const method = id ? 'PUT' : 'POST';
+    const url = id ? `${API_URL}/expiring-items/${id}` : `${API_URL}/expiring-items`;
+
+    try {
+        const res = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (res.ok) {
+            closeExpiringModal();
+            fetchExpiringData();
+        }
+    } catch (e) { console.error(e); }
+}
+
+async function deleteExpiringItem(id) {
+    if (!confirm(i18n('msg_confirm_delete'))) return;
+    try {
+        const res = await fetch(`${API_URL}/expiring-items/${id}`, { method: 'DELETE' });
+        if (res.ok) fetchExpiringData();
+    } catch (e) { console.error(e); }
+}
+
+function renderExpiringView() {
+    const grid = document.getElementById('expiring-grid');
+    if (!grid) return;
+
+    let html = '';
+    const now = new Date();
+
+    expiringItems.forEach(item => {
+        const expDate = new Date(item.expiration_date);
+        const diffMs = expDate - now;
+        const diffHours = Math.round(diffMs / (1000 * 60 * 60));
+        const diffDays = (diffMs / (1000 * 60 * 60 * 24)).toFixed(1);
+
+        let badgeColor = 'var(--success)';
+        let badgeText = `${diffDays} días restantes`;
+
+        if (diffMs <= 0) {
+            badgeColor = 'var(--danger)';
+            badgeText = 'EXPIRADO';
+        } else if (diffHours <= 24) {
+            badgeColor = 'var(--danger)';
+            badgeText = `Urgente: ${diffHours}h restantes`;
+        } else if (diffHours <= 72) {
+            badgeColor = '#f59e0b';
+            badgeText = `Próximo: ${diffDays} días`;
+        }
+
+        const charObj = characters.find(c => String(c.id) === String(item.character_id));
+
+        html += `
+        <div class="card glass-panel" style="display:flex; flex-direction:column; justify-content:space-between;">
+            <div>
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+                    <div>
+                        <span style="background:rgba(255,255,255,0.1); font-size:0.75rem; padding:2px 6px; border-radius:4px; color:var(--primary);">
+                            ${item.item_category || 'Ítem Temporal'}
+                        </span>
+                        <h3 style="margin:5px 0 0 0; color:white; font-size:1.1rem;">${item.item_name}</h3>
+                    </div>
+                    <span style="background:${badgeColor}; color:#000; font-weight:700; font-size:0.75rem; padding:4px 8px; border-radius:6px;">
+                        ${badgeText}
+                    </span>
+                </div>
+                <div style="font-size:0.85rem; opacity:0.8; margin-top:8px;">
+                    <p style="margin:3px 0;"><i class="fa-solid fa-user" style="color:var(--primary);"></i> Personaje: <strong>${charObj ? charObj.name : 'General'}</strong></p>
+                    <p style="margin:3px 0;"><i class="fa-solid fa-calendar-xmark" style="color:rgba(255,255,255,0.6);"></i> Expira: <strong>${item.expiration_date.replace('T', ' ')}</strong></p>
+                    ${item.note ? `<p style="margin:5px 0 0 0; font-style:italic; opacity:0.7;">"${item.note}"</p>` : ''}
+                </div>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:15px; border-top:1px solid rgba(255,255,255,0.06); padding-top:10px;">
+                <button class="icon-btn" onclick='openExpiringModal(${JSON.stringify(item).replace(/'/g, "&apos;")})' title="Editar"><i class="fa-solid fa-pen"></i></button>
+                <button class="icon-btn delete" onclick="deleteExpiringItem(${item.id})" title="Eliminar"><i class="fa-solid fa-trash-can"></i></button>
+            </div>
+        </div>
+        `;
+    });
+
+    grid.innerHTML = html || `<p style="grid-column: 1/-1; text-align:center; opacity:0.5;">No hay ítems temporales registrados.</p>`;
+}
+
+
+/* ==========================================================================
+   FEATURE 5: EXCEL DATABASE BACKUP SYSTEM
+   ========================================================================== */
+async function loadBackupsList() {
+    const listEl = document.getElementById('backups-list');
+    if (!listEl) return;
+    try {
+        const res = await fetch(`${API_URL}/config/backups`);
+        const files = await res.json();
+        let html = '';
+        if (files.length === 0) {
+            html = '<p style="opacity:0.5; margin:5px 0;">No hay respaldos creados aún.</p>';
+        } else {
+            files.forEach(f => {
+                const dateStr = new Date(f.modified * 1000).toLocaleString();
+                const kb = (f.size / 1024).toFixed(1);
+                html += `
+                <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); padding:6px 10px; border-radius:6px;">
+                    <div>
+                        <strong style="color:white; font-size:0.8rem;">${f.filename}</strong>
+                        <div style="font-size:0.7rem; opacity:0.6;">${dateStr} (${kb} KB)</div>
+                    </div>
+                    <button class="btn-secondary" style="font-size:0.7rem; padding:2px 8px;" onclick="restoreExcelBackup('${f.filename}')">
+                        <i class="fa-solid fa-rotate-left"></i> Restaurar
+                    </button>
+                </div>
+                `;
+            });
+        }
+        listEl.innerHTML = html;
+    } catch (e) { console.error('Error loading backups list:', e); }
+}
+
+async function createExcelBackup() {
+    try {
+        const res = await fetch(`${API_URL}/config/backups/create`, { method: 'POST' });
+        if (res.ok) {
+            alert('Copia de seguridad creada con éxito.');
+            loadBackupsList();
+        } else {
+            alert('Error al crear la copia de seguridad.');
+        }
+    } catch (e) { console.error(e); }
+}
+
+async function restoreExcelBackup(filename) {
+    if (!confirm(`¿Restaurar la copia de seguridad "${filename}"? Los datos actuales serán reemplazados.`)) return;
+    try {
+        const res = await fetch(`${API_URL}/config/backups/restore`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filename })
+        });
+        if (res.ok) {
+            alert('Base de datos restaurada con éxito. Se recargará la página.');
+            window.location.reload();
+        } else {
+            alert('Error al restaurar respaldo.');
+        }
+    } catch (e) { console.error(e); }
+}
+
+function openConfigModal() {
+    const modal = document.getElementById('config-modal');
+    if (modal) {
+        document.getElementById('config-db-path').value = dbPath || '';
+        document.getElementById('config-flyff-path').value = flyffPath || '';
+        document.getElementById('config-flyff-params').value = flyffParams || '';
+        loadBackupsList();
+        modal.classList.add('show');
+    }
+}
+
+function closeConfigModal() {
+    const modal = document.getElementById('config-modal');
+    if (modal) modal.classList.remove('show');
+}
+
+

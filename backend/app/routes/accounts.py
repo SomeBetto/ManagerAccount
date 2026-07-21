@@ -64,6 +64,38 @@ def delete_account(id):
         current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 400
 
+@bp.route('/sharing', methods=['GET'])
+def get_account_sharing():
+    try:
+        sharing = ExcelDB.get_all('account_sharing')
+        return jsonify(sharing)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+@bp.route('/<int:acc_id>/sharing', methods=['POST'])
+def save_account_sharing(acc_id):
+    try:
+        data = request.json or {}
+        all_s = ExcelDB.get_all('account_sharing')
+        existing = [s for s in all_s if str(s.get('account_id')) == str(acc_id)]
+        
+        save_data = {
+            'account_id': acc_id,
+            'status': data.get('status', 'Personal'),
+            'borrowed_to': data.get('borrowed_to', ''),
+            'notes': data.get('notes', ''),
+            'tags': data.get('tags', '')
+        }
+
+        if existing:
+            updated = ExcelDB.update('account_sharing', existing[0]['id'], save_data)
+            return jsonify(updated)
+        else:
+            inserted = ExcelDB.insert('account_sharing', save_data)
+            return jsonify(inserted), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
 @bp.route('/batch-delete', methods=['POST'])
 def batch_delete_accounts():
     data = request.json
