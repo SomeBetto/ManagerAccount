@@ -42,8 +42,14 @@ def find_in_bgra_buffer(buf, width, height, checks, template_w=100, template_h=2
     first_dx, first_dy, (first_r, first_g, first_b) = checks[0]
     other_checks = checks[1:]
     
-    for y in range(0, height - template_h):
-        for x in range(0, width - template_w):
+    # Search the entire window area
+    start_y = 0
+    end_y = height
+    start_x = 0
+    end_x = width
+    
+    for y in range(start_y, min(end_y, height - template_h)):
+        for x in range(start_x, min(end_x, width - template_w)):
             idx = ((y + first_dy) * width + x + first_dx) * 4
             if idx + 2 >= len(buf):
                 continue
@@ -259,32 +265,28 @@ def autoress_worker():
                     user32.GetCursorPos(ctypes.byref(orig_cursor_pos))
                     
                     focused = force_foreground(hwnd)
-                    time.sleep(0.2) # Let window paint and activate
+                    time.sleep(0.5) # Let window paint and activate
                     
                     # Safety release for Alt key in case it got stuck during focus transfer
                     user32.keybd_event(0x12, 0, 2, 0) # Alt UP
+                    time.sleep(0.1)
                     
                     pt = POINT(0, 0)
                     user32.ClientToScreen(hwnd, ctypes.byref(pt))
                     click_screen_x = pt.x + click_x
                     click_screen_y = pt.y + click_y
                     
-                    # Move cursor and wait 0.2s for the game engine to update its mouse position
+                    # Move cursor and wait 0.3s for the game engine to update its mouse position
                     user32.SetCursorPos(click_screen_x, click_screen_y)
-                    time.sleep(0.2)
+                    time.sleep(0.3)
                     
                     # Send mouse click with proper press duration
                     user32.mouse_event(0x0002, 0, 0, 0, 0) # LEFTDOWN
-                    time.sleep(0.1)
+                    time.sleep(0.15)
                     user32.mouse_event(0x0004, 0, 0, 0, 0) # LEFTUP
                     
-                    # Wait 0.2 seconds to let the game process the release event before restoring focus
-                    time.sleep(0.2)
-                    
-                    # Restore mouse cursor position and active window safely
-                    user32.SetCursorPos(orig_cursor_pos.x, orig_cursor_pos.y)
-                    if orig_fg_hwnd and orig_fg_hwnd != hwnd:
-                        force_foreground(orig_fg_hwnd)
+                    # Wait 0.5 seconds to let the game process the click
+                    time.sleep(0.5)
                     
                     with ress_lock:
                         ress_count += 1
@@ -429,3 +431,5 @@ def test_match():
         'game_windows_count': len(hwnds),
         'windows': results
     })
+
+
