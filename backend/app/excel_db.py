@@ -93,7 +93,19 @@ def set_config_keys(updates):
     with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=4)
 
+TABLE_SHEET_ALIASES = {
+    'character_gear': ['inventario', 'inventario_gear', 'equipamiento', 'gear', 'character_gear'],
+    'accounts': ['accounts', 'cuentas', 'login'],
+    'characters': ['characters', 'personajes', 'pjs']
+}
+
 class ExcelDB:
+    _cache = {}
+
+    @classmethod
+    def clear_cache(cls):
+        cls._cache.clear()
+
     @staticmethod
     def _get_workbook():
         path = get_excel_path()
@@ -112,6 +124,11 @@ class ExcelDB:
         for name in wb.sheetnames:
             if name.lower() == target_lower:
                 return name
+        aliases = TABLE_SHEET_ALIASES.get(target_name, [])
+        for alias in aliases:
+            for name in wb.sheetnames:
+                if name.lower() == alias.lower():
+                    return name
         return None
 
     @staticmethod
@@ -126,6 +143,7 @@ class ExcelDB:
 
     @classmethod
     def init_db(cls):
+        cls.clear_cache()
         path = get_excel_path()
         if not path:
             return # Nothing to init if no path
@@ -143,7 +161,8 @@ class ExcelDB:
         for table_name, columns in SCHEMA.items():
             actual_name = cls._get_actual_sheetname(wb, table_name)
             if not actual_name:
-                ws = wb.create_sheet(title=table_name)
+                sheet_title = 'Inventario' if table_name == 'character_gear' else table_name
+                ws = wb.create_sheet(title=sheet_title)
                 # Write headers
                 for col_num, column_title in enumerate(columns, 1):
                     ws.cell(row=1, column=col_num, value=column_title)
@@ -175,10 +194,14 @@ class ExcelDB:
         return {headers[i]: cell.value for i, cell in enumerate(row)}
 
     @classmethod
-    def get_all(cls, table_name):
+    def get_all(cls, table_name, use_cache=True):
+        if use_cache and table_name in cls._cache:
+            return cls._cache[table_name]
+
         wb, _ = cls._get_workbook()
         actual_name = cls._get_actual_sheetname(wb, table_name)
         if not actual_name:
+            cls._cache[table_name] = []
             return []
         ws = wb[actual_name]
         
@@ -265,6 +288,7 @@ class ExcelDB:
                 elif not data.get('account_id'):
                     data['account_id'] = None 
         
+        cls._cache[table_name] = results
         return results
 
     @classmethod
@@ -361,10 +385,12 @@ class ExcelDB:
                 ws.cell(row=row_num, column=col_idx, value=val)
 
         cls._save_workbook(wb, path)
+        cls.clear_cache()
         return data_dict
 
     @classmethod
     def update(cls, table_name, record_id, new_data):
+        cls.clear_cache()
         wb, path = cls._get_workbook()
         actual_name = cls._get_actual_sheetname(wb, table_name)
         if not actual_name:
@@ -440,6 +466,63 @@ class ExcelDB:
                 break
                 
         return updated_dict
+
+    @classmethod
+    def delete(cls, table_name, record_id):
+        wb, path = cls._get_workbook()
+        actual_name = cls._get_actual_sheetname(wb, table_name)
+        if not actual_name:
+            return False
+
+        ws = wb[actual_name]
+        rows = list(ws.iter_rows())
+        header_row_idx = 0
+        headers = []
+        found_header_match = False
+
+        if rows:
+            for i, row in enumerate(rows[:10]):
+                raw_vals = [str(cell.value).lower().strip() if cell.value is not None else "" for cell in row]
+                known_matches = sum(1 for v in raw_vals if v and any(v in aliases for aliases in HEADER_ALIASES.values()))
+                if known_matches >= 2:
+                    header_row_idx = i
+                    headers = [cls._map_header(cell.value) if cell.value is not None else f"col_{j}" for j, cell in enumerate(row)]
+                    found_header_match = True
+                    break
+
+        if not found_header_match:
+            headers = [cls._map_header(cell.value) if (rows and cell.value) else f"col_{j}" for j, cell in enumerate(rows[0] if rows else [])]
+            header_row_idx = 0
+
+        id_col_idx = -1
+        for idx, h in enumerate(headers):
+            if h == 'id':
+                id_col_idx = idx
+                break
+
+        found_row_idx = None
+        for rel_idx, row in enumerate(rows[header_row_idx+1:], start=1):
+            current_row_idx = header_row_idx + rel_idx + 1
+            row_id = None
+            if id_col_idx != -1 and row[id_col_idx].value is not None:
+                try:
+                    row_id = int(row[id_col_idx].value)
+                except:
+                    row_id = current_row_idx
+            else:
+                row_id = current_row_idx
+
+            if str(row_id) == str(record_id):
+                found_row_idx = current_row_idx
+                break
+
+        if found_row_idx:
+            ws.delete_rows(found_row_idx, 1)
+            cls._save_workbook(wb, path)
+            cls.clear_cache()
+            return True
+
+        return False
 
     @classmethod
     def get_catalog(cls, sheet_name, column_name):
@@ -521,6 +604,24 @@ class ExcelDB:
         return files
 
     @classmethod
+    def check_and_run_auto_backup(cls):
+        try:
+            import datetime
+            path = get_excel_path()
+            if not path or not os.path.exists(path):
+                return None
+            backups = cls.list_backups()
+            now_ts = datetime.datetime.now().timestamp()
+            # Run auto-backup if no backups exist or latest backup is older than 24 hours (86400s)
+            if not backups or (now_ts - backups[0]['modified'] > 86400):
+                res = cls.create_backup()
+                print(f"[Auto-Backup] Backup automático generado: {res.get('filename')}")
+                return res
+        except Exception as e:
+            print(f"[Auto-Backup Error]: {e}")
+        return None
+
+    @classmethod
     def restore_backup(cls, filename):
         backup_dir = cls.get_backups_dir()
         backup_path = os.path.join(backup_dir, filename)
@@ -531,5 +632,7 @@ class ExcelDB:
             raise Exception("Target Excel path not configured.")
         import shutil
         shutil.copy2(backup_path, excel_path)
+        cls.clear_cache()
+        return {"message": f"Restored backup {filename}"}
         return {"status": "success", "restored": filename}
 

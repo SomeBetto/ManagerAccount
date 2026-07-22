@@ -172,3 +172,28 @@ def restore_backup():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@bp.route('/login-zones', methods=['GET'])
+def get_login_zones():
+    try:
+        from app.excel_db import get_config_key
+        zones = get_config_key('login_zones')
+        if zones is None:
+            zones = []
+        return jsonify(zones)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@bp.route('/login-zones', methods=['POST'])
+def update_login_zones():
+    try:
+        from app.excel_db import set_config_keys
+        data = request.json
+        zones_list = data if isinstance(data, list) else (data.get('zones', []) if isinstance(data, dict) else [])
+        set_config_keys({'login_zones': zones_list})
+        return jsonify({'message': 'Zonas de logeo guardadas con éxito.', 'zones': zones_list}), 200
+    except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
+        return jsonify({'error': str(e)}), 400
+
+

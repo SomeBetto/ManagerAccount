@@ -23,6 +23,11 @@ const translations = {
         sidebar_dailyevent: "Daily Events",
         sidebar_coupons: "Coupons",
         sidebar_contadores: "Counters",
+        sidebar_gear: "Gear",
+        menu_accounts_chars: "Accounts & Chars",
+        menu_equipment: "Equipment & Items",
+        menu_leveling_activities: "Leveling & Activities",
+        menu_tools: "Tools & Extras",
         page_title_contadores: "Counters",
         // General UI
         btn_add_account: "New Account",
@@ -145,6 +150,11 @@ const translations = {
         sidebar_dailyevent: "Eventos Diarios",
         sidebar_coupons: "Cupones",
         sidebar_contadores: "Contadores",
+        sidebar_gear: "Equipamiento",
+        menu_accounts_chars: "Cuentas & Personajes",
+        menu_equipment: "Equipamiento & Ítems",
+        menu_leveling_activities: "Leveo & Eventos",
+        menu_tools: "Herramientas & Extras",
         page_title_contadores: "Contadores",
         // General UI
         btn_add_account: "Nueva Cuenta",
@@ -360,7 +370,14 @@ function toggleSidebar() {
     localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
 }
 
-// Navigation
+// Navigation & Submenu Accordion
+function toggleNavGroup(headerEl) {
+    const group = headerEl.closest('.nav-group');
+    if (group) {
+        group.classList.toggle('expanded');
+    }
+}
+
 function switchView(view) {
     if (autotoolInterval) {
         clearInterval(autotoolInterval);
@@ -368,8 +385,14 @@ function switchView(view) {
     }
     currentView = view;
     document.querySelectorAll('.nav-links li').forEach(li => li.classList.remove('active'));
-    const clickedLi = document.querySelector(`.nav-links li[onclick="switchView('${view}')"]`);
-    if (clickedLi) clickedLi.classList.add('active');
+    const clickedLi = document.querySelector(`.nav-links li[data-view="${view}"]`) || document.querySelector(`.nav-links li[onclick="switchView('${view}')"]`);
+    if (clickedLi) {
+        clickedLi.classList.add('active');
+        const parentGroup = clickedLi.closest('.nav-group');
+        if (parentGroup) {
+            parentGroup.classList.add('expanded');
+        }
+    }
 
     // Remove active from all view sections
     document.querySelectorAll('.view-section').forEach(section => section.classList.remove('active'));
@@ -433,7 +456,7 @@ function switchView(view) {
     } else if (view === 'gear') {
         const gearView = document.getElementById('gear-view');
         if (gearView) gearView.classList.add('active');
-        pageTitle.innerHTML = i18n('sidebar_gear') || 'Equipamiento & Fashion';
+        pageTitle.innerHTML = i18n('sidebar_gear') || 'Equipamiento';
         fetchGearData();
     } else if (view === 'routines') {
         const routinesView = document.getElementById('routines-view');
@@ -544,18 +567,18 @@ function renderItems() {
             const itemName = (item.name || '').toLowerCase();
             const itemType = (item.item_type || '').toLowerCase();
             const itemDesc = (item.description || '').toLowerCase();
-            
-            return itemName.includes(searchVal) || 
-                   itemType.includes(searchVal) || 
-                   itemDesc.includes(searchVal) || 
-                   charName.includes(searchVal);
+
+            return itemName.includes(searchVal) ||
+                itemType.includes(searchVal) ||
+                itemDesc.includes(searchVal) ||
+                charName.includes(searchVal);
         });
     }
 
     grid.innerHTML = filteredItems.map(item => {
         const char = characters.find(c => c.id === parseInt(item.character_id));
         const charName = char ? char.name : 'Unknown';
-        
+
         return `
         <div class="card">
             <div class="card-bar" style="display:flex; justify-content:flex-end; padding-bottom:0.8rem; margin-bottom:0.8rem; border-bottom:1px solid rgba(255,255,255,0.05);">
@@ -696,7 +719,7 @@ async function browseAndCreateExcel() {
         } else if (data.error) {
             alert(data.error);
         }
-    } catch (e) { 
+    } catch (e) {
         console.error(e);
         alert(i18n('msg_error'));
     }
@@ -710,7 +733,7 @@ async function saveConfig() {
     const val = parseInt(document.getElementById('config-threshold').value);
     levelThreshold = isNaN(val) ? 0 : val;
     localStorage.setItem('levelThreshold', levelThreshold);
-    
+
     const newPath = document.getElementById('config-db-path').value.trim();
     const newFlyffPath = document.getElementById('config-flyff-path').value.trim();
     const newFlyffParams = document.getElementById('config-flyff-params').value.trim();
@@ -872,7 +895,7 @@ async function toggleFavorite(id) {
     // 1. Immediate UI Feedback (Optimistic UI)
     const oldState = char.is_favorite;
     char.is_favorite = !oldState;
-    
+
     // Find the button and update it immediately
     const stars = document.querySelectorAll(`.favorite[onclick="toggleFavorite(${id})"]`);
     stars.forEach(btn => {
@@ -895,7 +918,7 @@ async function toggleFavorite(id) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ is_favorite: char.is_favorite })
         });
-        
+
         if (!res.ok) {
             // Revert on error
             char.is_favorite = oldState;
@@ -908,7 +931,7 @@ async function toggleFavorite(id) {
                 renderFavorites();
             }
         }
-    } catch (e) { 
+    } catch (e) {
         console.error(e);
         char.is_favorite = oldState; // Revert
     }
@@ -917,7 +940,7 @@ async function toggleFavorite(id) {
 function renderCharactersHTML(list, targetGridId = 'characters-grid') {
     const grid = document.getElementById(targetGridId);
     if (!grid) return;
-    
+
     // Helper to get Account Email - Using loose equality == for ID resilience
     const getAccountEmail = (id) => {
         if (!id) return 'No Account';
@@ -930,7 +953,7 @@ function renderCharactersHTML(list, targetGridId = 'characters-grid') {
             try {
                 const charType = char.char_type || 'Unknown';
                 const charTypeLower = charType.toLowerCase ? charType.toLowerCase() : 'unknown';
-                
+
                 return `
                 <div class="card">
                     <div class="card-bar" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:0.8rem; margin-bottom:0.8rem; border-bottom:1px solid rgba(255,255,255,0.05);">
@@ -1008,9 +1031,9 @@ function openVacanteModal(accountId) {
     prefillAccountId = accountId;
     const acc = accounts.find(a => a.id == accountId);
     if (!acc) return;
-    
+
     const accChars = characters.filter(c => c.account_id == accountId);
-    
+
     document.getElementById('vd-title').innerText = acc.email;
     document.getElementById('vd-credentials').innerHTML = `
         <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountEmail(${acc.id})"><i class="fa-solid fa-envelope"></i> Email</button>
@@ -1018,7 +1041,7 @@ function openVacanteModal(accountId) {
         <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountPin(${acc.id})"><i class="fa-solid fa-lock"></i> PIN</button>
     `;
     document.getElementById('vd-count').innerText = accChars.length;
-    
+
     const grid = document.getElementById('vd-characters-grid');
     grid.innerHTML = accChars.map(char => `
         <div class="card">
@@ -1031,7 +1054,7 @@ function openVacanteModal(accountId) {
             </div>
         </div>
     `).join('') || `<p style="opacity:0.6; font-style:italic; padding:10px;">${i18n('field_desc_empty')}</p>`;
-    
+
     document.getElementById('vacante-details-modal').classList.add('show');
 }
 
@@ -1090,7 +1113,7 @@ async function openModal(type = null, id = null) {
         // Character Form
         const data = id ? characters.find(c => c.id == id) : { account_id: prefillAccountId };
         prefillAccountId = null; // Clear after use
-        
+
         const accountOptions = accounts.map(a => `<option value="${a.id}" ${data.account_id == a.id ? 'selected' : ''}>${a.email}</option>`).join('');
 
         // Fetch Class Catalog
@@ -1201,7 +1224,7 @@ async function submitForm() {
     if (editingType === 'account') endpoint = 'accounts';
     if (editingType === 'character') endpoint = 'characters';
     if (editingType === 'item') endpoint = 'items';
-    
+
     const method = editingId ? 'PUT' : 'POST';
     const url = editingId ? `${API_URL}/${endpoint}/${editingId}` : `${API_URL}/${endpoint}`;
 
@@ -1359,17 +1382,17 @@ function showCopyFeedback(el) {
         tooltip.className = 'copy-tooltip';
         tooltip.innerText = i18n('msg_copy_success') || '¡Copiado!';
         document.body.appendChild(tooltip);
-        
+
         const rect = el.getBoundingClientRect();
         const tooltipRect = tooltip.getBoundingClientRect();
-        
+
         // Position it center-aligned horizontally, above the target button
         const top = window.scrollY + rect.top - tooltipRect.height - 8;
         const left = window.scrollX + rect.left + (rect.width / 2);
-        
+
         tooltip.style.top = `${top}px`;
         tooltip.style.left = `${left}px`;
-        
+
         setTimeout(() => {
             tooltip.classList.add('fade-out');
             setTimeout(() => {
@@ -1479,16 +1502,17 @@ let levelQueue = [];
 
 async function fetchLevelQueue() {
     try {
-        const res = await fetch(`${API_URL}/levelzone`);
+        const res = await fetch(`${API_URL}/leveling`);
         if (res.ok) {
             levelQueue = await res.json();
             renderLevelQueue();
             if (currentView === 'dashboard') renderDashboard();
         } else {
-            console.warn("Error fetching level queue:", await res.json());
+            const err = await res.json().catch(() => ({}));
+            console.warn("Error fetching level queue:", err);
             levelQueue = [];
         }
-    } catch (e) { console.error(e); levelQueue = []; }
+    } catch (e) { console.error('Error fetching level queue:', e); levelQueue = []; }
 }
 
 function renderLevelQueue() {
@@ -1936,17 +1960,17 @@ async function startRedemption(couponId) {
     activeCouponId = couponId;
     redemptionStep = 'accounts';
     const coupon = coupons.find(c => c.id === couponId);
-    
+
     document.getElementById('coupon-step-container').style.display = 'block';
     document.getElementById('coupon-step-text').innerText = `${i18n('coupon_step1')}: [${coupon.name}]`;
-    
+
     const grid = document.getElementById('coupons-grid');
     grid.innerHTML = '<div class="loading-spinner"></div>';
 
     try {
         const res = await fetch(`${API_URL}/coupons/${couponId}/unredeemed`);
         const unredeemed = await res.json();
-        
+
         grid.innerHTML = (unredeemed.length > 0) ? unredeemed.map(acc => `
             <div class="card account-card" onclick="selectAccountForRedemption(${acc.id})" style="cursor:pointer; transition:transform 0.2s;">
                 <div class="card-header">
@@ -1969,7 +1993,7 @@ function selectAccountForRedemption(accountId) {
     redemptionStep = 'characters';
     const acc = accounts.find(a => a.id === accountId);
     const coupon = coupons.find(c => c.id === activeCouponId);
-    
+
     document.getElementById('coupon-step-text').innerHTML = `
         <div style="display:flex; flex-direction:column; gap:12px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -2001,10 +2025,10 @@ function selectAccountForRedemption(accountId) {
             </div>
         </div>
     `;
-    
+
     const accChars = characters.filter(c => c.account_id == accountId);
     const grid = document.getElementById('coupons-grid');
-    
+
     let html = `
         <div style="grid-column: 1 / -1; margin-bottom: 1.5rem;">
             <div class="card" style="background:rgba(255,255,255,0.02); border:1px dashed rgba(255,255,255,0.1); padding:20px; text-align:center;">
@@ -2202,7 +2226,7 @@ function copyText(text, event) {
 async function launchSelectedAccounts() {
     const ids = Array.from(selectedAccountIds);
     if (ids.length === 0) return;
-    
+
     try {
         const res = await fetch(`${API_URL}/accounts/launch`, {
             method: 'POST',
@@ -2229,14 +2253,14 @@ let compactCycles = {}; // Stores { accountId: 'email' | 'password' | 'pin' | 'o
 async function toggleCompactMode() {
     isCompact = !isCompact;
     document.body.classList.toggle('compact-mode', isCompact);
-    
+
     const compactView = document.getElementById('compact-view');
-    
+
     if (isCompact) {
         compactView.style.display = 'flex';
         const searchInput = document.getElementById('compact-search');
         if (searchInput) searchInput.value = ''; // Reset search on open
-        
+
         try {
             await fetchAccounts();
             await fetchCharacters();
@@ -2251,22 +2275,22 @@ async function toggleCompactMode() {
 function renderCompactList() {
     const listEl = document.getElementById('compact-list');
     if (!listEl) return;
-    
+
     const searchVal = document.getElementById('compact-search')?.value.toLowerCase().trim() || '';
-    
+
     // Filter accounts by email or character names
     let filteredAccounts = [...accounts];
     if (searchVal) {
         filteredAccounts = filteredAccounts.filter(acc => {
             const emailMatch = acc.email.toLowerCase().includes(searchVal);
-            
+
             const accChars = characters.filter(c => c.account_id == acc.id);
             const charMatch = accChars.some(char => char.name.toLowerCase().includes(searchVal));
-            
+
             return emailMatch || charMatch;
         });
     }
-    
+
     listEl.innerHTML = filteredAccounts.map(acc => {
         const accChars = characters.filter(c => c.account_id == acc.id);
         const charHtml = accChars.map(char => `
@@ -2275,13 +2299,13 @@ function renderCompactList() {
                 <span class="lvl">Lvl ${char.level || 0}</span>
             </div>
         `).join('');
-        
+
         const currentState = compactCycles[acc.id] || 'email';
         let buttonText = 'Copiar Email';
         if (currentState === 'password') buttonText = 'Copiar Contraseña';
         if (currentState === 'pin') buttonText = `PIN: ${acc.pin || 'N/A'}`;
         if (currentState === 'otp') buttonText = `OTP: ${acc.otp_token || 'N/A'}`;
-        
+
         return `
             <div class="compact-card" id="compact-card-${acc.id}">
                 <div class="compact-card-header">
@@ -2317,10 +2341,10 @@ async function launchSingleAccount(accountId) {
 function cycleCredentials(accountId) {
     const acc = accounts.find(a => a.id === accountId);
     if (!acc) return;
-    
+
     const currentState = compactCycles[accountId] || 'email';
     const btn = document.getElementById(`cycle-btn-${accountId}`);
-    
+
     if (currentState === 'email') {
         copyToClipboard(acc.email);
         compactCycles[accountId] = 'password';
@@ -2423,9 +2447,9 @@ function playAlarmSound() {
         if (!audioCtx) {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
-        
+
         const now = audioCtx.currentTime;
-        
+
         // Synthesize Beep 1
         const osc1 = audioCtx.createOscillator();
         const gain1 = audioCtx.createGain();
@@ -2449,7 +2473,7 @@ function playAlarmSound() {
         gain2.connect(audioCtx.destination);
         osc2.start(now + 0.25);
         osc2.stop(now + 0.6);
-        
+
     } catch (e) {
         console.error("No se pudo reproducir la alarma por restricciones de la API de Audio:", e);
     }
@@ -2497,14 +2521,14 @@ function renderContadores() {
 
         if (isActive) {
             timeLeft = Math.max(0, contador.endTime - Date.now());
-            
+
             // Format time left
             const hours = Math.floor(timeLeft / 3600000);
             const minutes = Math.floor((timeLeft % 3600000) / 60000);
             const seconds = Math.floor((timeLeft % 60000) / 1000);
-            
+
             timeString = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-            
+
             if (timeLeft > 0) {
                 cardClass += ' timer-active';
             } else {
@@ -2535,10 +2559,10 @@ function renderContadores() {
                     <div class="timer-display" id="timer-display-${contador.id}">${timeString}</div>
                 </div>
                 <div class="contador-card-footer">
-                    ${isActive && timeLeft > 0 ? 
-                        `<button class="btn-secondary" onclick="stopContador('${contador.id}')"><i class="fa-solid fa-stop"></i> Detener</button>` : 
-                        `<button class="btn-primary" onclick="startContador('${contador.id}')"><i class="fa-solid fa-play"></i> Iniciar</button>`
-                    }
+                    ${isActive && timeLeft > 0 ?
+                `<button class="btn-secondary" onclick="stopContador('${contador.id}')"><i class="fa-solid fa-stop"></i> Detener</button>` :
+                `<button class="btn-primary" onclick="startContador('${contador.id}')"><i class="fa-solid fa-play"></i> Iniciar</button>`
+            }
                     <button class="btn-secondary" onclick="startContador('${contador.id}')" title="Reiniciar desde el inicio"><i class="fa-solid fa-redo"></i> Reset</button>
                 </div>
             </div>
@@ -2550,14 +2574,14 @@ function renderContadores() {
 let timerInterval = null;
 function startTimerEngine() {
     if (timerInterval) clearInterval(timerInterval);
-    
+
     timerInterval = setInterval(() => {
         contadores.forEach(contador => {
             if (contador.endTime !== null) {
                 const timeLeft = contador.endTime - Date.now();
                 const card = document.getElementById(`contador-card-${contador.id}`);
                 const display = document.getElementById(`timer-display-${contador.id}`);
-                
+
                 if (timeLeft <= 0) {
                     if (display) display.innerText = '00:00:00';
                     if (card && !card.classList.contains('timer-warning')) {
@@ -2570,7 +2594,7 @@ function startTimerEngine() {
                     const hours = Math.floor(timeLeft / 3600000);
                     const minutes = Math.floor((timeLeft % 3600000) / 60000);
                     const seconds = Math.floor((timeLeft % 60000) / 1000);
-                    
+
                     if (display) {
                         display.innerText = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
                     }
@@ -2620,13 +2644,13 @@ function deleteContador(contadorId) {
 
 function restoreDefaultContadores() {
     if (!confirm('¿Restaurar los contadores por defecto (Clockworks, Red Meteonyker, Giant Mushpoie)? Esto agregará los que falten.')) return;
-    
+
     DEFAULT_CONTADORES.forEach(defCont => {
         if (!contadores.some(c => c.id === defCont.id)) {
             contadores.push({ ...defCont });
         }
     });
-    
+
     saveContadores();
     renderContadores();
 }
@@ -2683,7 +2707,7 @@ function openAccountDetailsModal(accountId) {
     const accChars = characters.filter(c => c.account_id == accountId);
 
     document.getElementById('ad-title').innerText = acc.email;
-    
+
     // Set the click event for the add character button
     const addCharBtn = document.getElementById('ad-add-char-btn');
     if (addCharBtn) {
@@ -2815,7 +2839,20 @@ async function toggleFavoriteFromAccountDetails(charId, accountId) {
 // Zona de Logeo (Login Zones)
 // ---------------------------------------------------------
 
-function loadLoginZones() {
+async function loadLoginZones() {
+    try {
+        const res = await fetch(`${API_URL}/config/login-zones`);
+        if (res.ok) {
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                loginZones = data;
+                localStorage.setItem('login_zones', JSON.stringify(loginZones));
+                return loginZones;
+            }
+        }
+    } catch (e) {
+        console.warn("Error fetching login_zones from backend API, using localStorage fallback:", e);
+    }
     const saved = localStorage.getItem('login_zones');
     if (saved) {
         try {
@@ -2827,17 +2864,27 @@ function loadLoginZones() {
     } else {
         loginZones = [];
     }
+    return loginZones;
 }
 
-function saveLoginZones() {
+async function saveLoginZones() {
     localStorage.setItem('login_zones', JSON.stringify(loginZones));
+    try {
+        await fetch(`${API_URL}/config/login-zones`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(loginZones)
+        });
+    } catch (e) {
+        console.error("Error saving login_zones to backend API:", e);
+    }
 }
 
-function renderLoginZones() {
+async function renderLoginZones() {
     const grid = document.getElementById('loginzone-grid');
     if (!grid) return;
 
-    loadLoginZones();
+    await loadLoginZones();
 
     if (loginZones.length === 0) {
         grid.innerHTML = `
@@ -2866,10 +2913,10 @@ function renderLoginZones() {
             zoneCharactersHtml = zone.characterIds.map(charId => {
                 const char = characters.find(c => c.id == charId);
                 if (!char) return ''; // Skip if not found
-                
+
                 const charType = char.char_type || 'Unknown';
                 const charTypeLower = charType.toLowerCase ? charType.toLowerCase() : 'unknown';
-                
+
                 return `
                     <div class="zone-char-item" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); padding:8px; border-radius:8px; display:flex; flex-direction:column; gap:5px;">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -2945,7 +2992,7 @@ function openLoginZoneModal(id = null) {
     // Populate checklist of characters
     if (checklistContainer) {
         const assignedSet = zone && zone.characterIds ? new Set(zone.characterIds.map(cid => parseInt(cid))) : new Set();
-        
+
         checklistContainer.innerHTML = characters
             .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
             .map(char => {
@@ -2967,7 +3014,7 @@ function closeLoginZoneModal() {
     if (modalEl) modalEl.classList.remove('show');
 }
 
-function submitLoginZone() {
+async function submitLoginZone() {
     const idInput = document.getElementById('loginzone-id-input');
     const nameInput = document.getElementById('loginzone-name-input');
     const name = nameInput.value.trim();
@@ -2999,25 +3046,25 @@ function submitLoginZone() {
         loginZones.push(newZone);
     }
 
-    saveLoginZones();
+    await saveLoginZones();
     closeLoginZoneModal();
     renderLoginZones();
 }
 
-function deleteLoginZone(id) {
+async function deleteLoginZone(id) {
     if (!confirm(currentLang === 'es' ? "¿Estás seguro de que quieres eliminar esta zona?" : "Are you sure you want to delete this zone?")) {
         return;
     }
     loginZones = loginZones.filter(z => z.id != id);
-    saveLoginZones();
+    await saveLoginZones();
     renderLoginZones();
 }
 
-function removeCharacterFromZone(zoneId, charId) {
+async function removeCharacterFromZone(zoneId, charId) {
     const zone = loginZones.find(z => z.id == zoneId);
     if (zone && zone.characterIds) {
         zone.characterIds = zone.characterIds.filter(id => id != charId);
-        saveLoginZones();
+        await saveLoginZones();
         renderLoginZones();
     }
 }
@@ -3026,14 +3073,14 @@ function renderDashboard() {
     // 1. KPI Cards data
     const totalAccounts = accounts.length;
     const totalCharacters = characters.length;
-    
+
     const vacantAccounts = accounts.filter(acc => {
         const charCount = characters.filter(c => c.account_id == acc.id).length;
         return charCount < 3;
     }).length;
-    
+
     const levelingQueue = levelQueue.length;
-    
+
     const activeTimers = contadores.filter(c => c.endTime !== null && c.endTime > Date.now()).length;
 
     // Update KPI UI
@@ -3110,7 +3157,7 @@ function renderDashboard() {
                 if (type.toLowerCase().includes('main')) icon = '<i class="fa-solid fa-star" style="color:#fbbf24;"></i>';
                 else if (type.toLowerCase().includes('farm')) icon = '<i class="fa-solid fa-wheat-awn" style="color:#f59e0b;"></i>';
                 else if (type.toLowerCase().includes('filler') || type.toLowerCase().includes('party')) icon = '<i class="fa-solid fa-user-plus" style="color:#3b82f6;"></i>';
-                
+
                 html += `
                 <div class="progress-item">
                     <div class="progress-header">
@@ -3202,10 +3249,10 @@ function updateAutoToolUI(data) {
     const toggle = document.getElementById('autoress-toggle');
     const badge = document.getElementById('autoress-status-badge');
     const countEl = document.getElementById('autoress-count');
-    
+
     if (toggle) toggle.checked = data.enabled;
     if (countEl) countEl.innerText = data.count;
-    
+
     if (badge) {
         if (data.enabled) {
             badge.className = 'tool-status-badge active';
@@ -3221,14 +3268,17 @@ function updateAutoToolUI(data) {
    FEATURE 1: GEAR & FASHION TRACKER (FLYFF INVENTORY GRID REDESIGN)
    ========================================================================== */
 let gearCatalog = null;
+let piercingCatalog = null;
 let characterGear = [];
 
 const FLYFF_SLOT_LABELS = {
+    talisman1: 'Talismán 1',
     jewelry_ring1: 'Anillo 1',
     jewelry_earring1: 'Pendiente 1',
     jewelry_necklace: 'Collar',
     jewelry_earring2: 'Pendiente 2',
     jewelry_ring2: 'Anillo 2',
+    talisman2: 'Talismán 2',
     weapon: 'Arma Principal',
     shield: 'Escudo / Secundario',
     cloak: 'Capa / Alas',
@@ -3248,6 +3298,12 @@ async function fetchGearData() {
         if (!gearCatalog) {
             const catRes = await fetch(`${API_URL}/gear/catalog`);
             gearCatalog = await catRes.json();
+        }
+        if (!piercingCatalog) {
+            try {
+                const pRes = await fetch(`${API_URL}/gear/piercing-catalog`);
+                piercingCatalog = await pRes.json();
+            } catch (e) { piercingCatalog = { piercing_rules: {} }; }
         }
         const gearRes = await fetch(`${API_URL}/gear`);
         characterGear = await gearRes.json();
@@ -3269,100 +3325,238 @@ function populateGearFilters() {
     }
 }
 
-async function openGearModal(gearItemOrCharId = null) {
+function isSameId(id1, id2) {
+    if (id1 === null || id1 === undefined || id2 === null || id2 === undefined) return false;
+    const s1 = String(id1).trim().replace(/\.0$/, '');
+    const s2 = String(id2).trim().replace(/\.0$/, '');
+    return s1 === s2;
+}
+
+function populateGearCharSelects() {
+    const safeCharacters = Array.isArray(characters) ? characters : [];
+    const charSelect = document.getElementById('gear-char-select');
+    const targetCharSelect = document.getElementById('gear-target-char-select');
+
+    let html = '';
+    safeCharacters.forEach(c => {
+        html += `<option value="${c.id}">${c.name} (${c.class_name || 'Sin clase'})</option>`;
+    });
+
+    if (charSelect) {
+        const curVal = charSelect.value;
+        charSelect.innerHTML = html || '<option value="">(Sin personajes)</option>';
+        if (curVal && safeCharacters.some(c => isSameId(c.id, curVal))) {
+            charSelect.value = curVal;
+        }
+    }
+    if (targetCharSelect) {
+        const curTargetVal = targetCharSelect.value;
+        targetCharSelect.innerHTML = html || '<option value="">(Sin personajes)</option>';
+        if (curTargetVal && safeCharacters.some(c => isSameId(c.id, curTargetVal))) {
+            targetCharSelect.value = curTargetVal;
+        }
+    }
+}
+
+function openGearModal(gearItemOrCharId = null) {
     const modal = document.getElementById('gear-modal');
     if (!modal) return;
 
-    try {
-        if (!characters || characters.length === 0) {
-            await fetchCharacters();
-        }
-        if (!gearCatalog) {
-            const catRes = await fetch(`${API_URL}/gear/catalog`);
-            gearCatalog = await catRes.json();
-        }
-        if (!characterGear) {
-            const gearRes = await fetch(`${API_URL}/gear`);
-            characterGear = await gearRes.json();
-        }
-    } catch (e) {
-        console.error('Error fetching gear data for modal:', e);
-    }
+    modal.style.display = 'flex';
+    modal.classList.add('show');
 
-    if (!characterGear) characterGear = [];
+    const safeCharacters = Array.isArray(characters) ? characters : [];
+    if (!characterGear || !Array.isArray(characterGear)) characterGear = [];
 
-    const charSelect = document.getElementById('gear-char-select');
-    if (charSelect) {
-        let charHtml = '';
-        characters.forEach(c => {
-            charHtml += `<option value="${c.id}">${c.name} (${c.class_name || 'Sin clase'})</option>`;
-        });
-        charSelect.innerHTML = charHtml || '<option value="">(Sin personajes)</option>';
-    }
-
+    populateGearCharSelects();
     populateGearCombos();
 
-    let targetCharId = characters.length > 0 ? characters[0].id : null;
-    let initialSlot = 'weapon';
+    let targetCharId = safeCharacters.length > 0 ? safeCharacters[0].id : null;
 
     if (gearItemOrCharId && typeof gearItemOrCharId === 'object') {
         targetCharId = gearItemOrCharId.character_id;
-        initialSlot = gearItemOrCharId.slot || 'weapon';
     } else if (gearItemOrCharId) {
         targetCharId = gearItemOrCharId;
     }
 
+    const charSelect = document.getElementById('gear-char-select');
     if (targetCharId && charSelect) {
         charSelect.value = targetCharId;
     }
 
-    onGearCharSelectChange(targetCharId, initialSlot);
-    modal.classList.add('show');
+    const activeId = charSelect?.value || targetCharId;
+    if (activeId) {
+        onGearCharSelectChange(activeId);
+    }
 }
 
 function openGearModalForChar(charId) {
     openGearModal(charId);
 }
 
+function openGearModalByGearId(gearId) {
+    const safeGear = Array.isArray(characterGear) ? characterGear : [];
+    const item = safeGear.find(g => isSameId(g.id, gearId));
+    if (item) {
+        openGearModal(item.character_id);
+    } else {
+        openGearModal();
+    }
+}
+
 function closeGearModal() {
     const modal = document.getElementById('gear-modal');
-    if (modal) modal.classList.remove('show');
+    if (modal) {
+        modal.classList.remove('show');
+        modal.style.display = 'none';
+    }
+    renderGearView();
+}
+
+function parseElementAndRefine(elementStr) {
+    if (!elementStr || elementStr === 'Ninguno') {
+        return { type: 'Ninguno', refine: '+0' };
+    }
+    const match = elementStr.match(/^(.*?)\s*(?:\(\+?(\d+)\)|\+?(\d+))?$/);
+    if (match) {
+        const type = match[1].trim();
+        const levelNum = match[2] || match[3] || '0';
+        return { type: type || 'Ninguno', refine: `+${levelNum}` };
+    }
+    return { type: elementStr, refine: '+0' };
+}
+
+function formatElementAndRefine(type, refine) {
+    if (!type || type === 'Ninguno') return 'Ninguno';
+    if (!refine || refine === '+0' || refine === '0') return type;
+    return `${type} (${refine})`;
 }
 
 function populateGearCombos() {
-    if (!gearCatalog) return;
     const refineSelect = document.getElementById('gear-refine-select');
-    const elemSelect = document.getElementById('gear-element-select');
-    const cardSelect = document.getElementById('gear-card-select');
+    const elemRefineSelect = document.getElementById('gear-element-refine-select');
+
+    const refines = Array.from({ length: 21 }, (_, i) => `+${i}`);
 
     if (refineSelect) {
-        refineSelect.innerHTML = (gearCatalog.refines || []).map(r => `<option value="${r}">${r}</option>`).join('');
+        refineSelect.innerHTML = refines.map(r => `<option value="${r}">${r}</option>`).join('');
     }
-    if (elemSelect) {
-        elemSelect.innerHTML = (gearCatalog.elements || []).map(e => `<option value="${e}">${e}</option>`).join('');
-    }
-    if (cardSelect) {
-        cardSelect.innerHTML = (gearCatalog.piercings || []).map(c => `<option value="${c}">${c}</option>`).join('');
+    if (elemRefineSelect) {
+        elemRefineSelect.innerHTML = refines.map(r => `<option value="${r}">${r}</option>`).join('');
     }
 }
 
-function onGearCharSelectChange(charId, slotToSelect = null) {
-    const char = characters.find(c => String(c.id) === String(charId));
+function getSlotConfig(slotKey) {
+    const cfg = piercingCatalog?.slot_config || piercingCatalog?.piercing_rules || {};
+    return cfg[slotKey] || { allow_refine: false, allow_element: false, max_piercings: 0 };
+}
+
+function updatePiercingForSlot(slotKey) {
+    const cardSelect = document.getElementById('gear-card-select');
+    const cardGroup = cardSelect?.closest('.form-group');
+    if (!cardSelect) return;
+
+    const slotCfg = getSlotConfig(slotKey);
+    const maxP = slotCfg.max_piercings || 0;
+
+    if (maxP === 0) {
+        cardSelect.innerHTML = '<option value="Sin Piercings">Sin Piercings</option>';
+        cardSelect.disabled = true;
+        if (cardGroup) cardGroup.style.opacity = '0.4';
+    } else {
+        cardSelect.disabled = false;
+        if (cardGroup) cardGroup.style.opacity = '1';
+        let opts = `<option value="0/${maxP}">0/${maxP} (Sin Piercings)</option>`;
+        for (let i = 1; i <= maxP; i++) {
+            opts += `<option value="${i}/${maxP}">${i}/${maxP}</option>`;
+        }
+        cardSelect.innerHTML = opts;
+    }
+}
+
+function onGearElementTypeChange() {
+    const elemTypeSelect = document.getElementById('gear-element-type-select');
+    const elemRefineSelect = document.getElementById('gear-element-refine-select');
+    const slotKey = document.getElementById('gear-selected-slot')?.value || 'weapon';
+    const slotCfg = getSlotConfig(slotKey);
+
+    if (!elemTypeSelect || !elemRefineSelect) return;
+
+    const selectedType = elemTypeSelect.value;
+    const maxElemRefine = slotCfg.max_refine || 20;
+
+    const currentRefineVal = elemRefineSelect.value;
+    const refines = Array.from({ length: maxElemRefine + 1 }, (_, i) => `<option value="+${i}">+${i}</option>`).join('');
+    elemRefineSelect.innerHTML = refines;
+
+    if (!slotCfg.allow_element || selectedType === 'Ninguno') {
+        elemRefineSelect.disabled = true;
+        elemRefineSelect.value = '+0';
+    } else {
+        elemRefineSelect.disabled = false;
+        if (currentRefineVal && currentRefineVal !== '+0') {
+            elemRefineSelect.value = currentRefineVal;
+        }
+    }
+}
+
+function updateRefineForSlot(slotKey) {
+    const slotCfg = getSlotConfig(slotKey);
+
+    const refineSelect = document.getElementById('gear-refine-select');
+    const refineGroup = refineSelect?.closest('.form-group');
+    const elemTypeSelect = document.getElementById('gear-element-type-select');
+    const elemRefineSelect = document.getElementById('gear-element-refine-select');
+    const elemRow = elemTypeSelect?.closest('div[style*="display:flex"]');
+
+    if (!slotCfg.allow_refine) {
+        if (refineSelect) {
+            refineSelect.innerHTML = '<option value="+0">+0</option>';
+            refineSelect.disabled = true;
+            refineSelect.value = '+0';
+        }
+        if (refineGroup) refineGroup.style.opacity = '0.4';
+    } else {
+        const maxR = slotCfg.max_refine || 20;
+        if (refineSelect) {
+            refineSelect.innerHTML = Array.from({ length: maxR + 1 }, (_, i) => `<option value="+${i}">+${i}</option>`).join('');
+            refineSelect.disabled = false;
+        }
+        if (refineGroup) refineGroup.style.opacity = '1';
+    }
+
+    if (!slotCfg.allow_element) {
+        if (elemTypeSelect) { elemTypeSelect.disabled = true; elemTypeSelect.value = 'Ninguno'; }
+        if (elemRefineSelect) { elemRefineSelect.disabled = true; elemRefineSelect.value = '+0'; }
+        if (elemRow) elemRow.style.opacity = '0.4';
+    } else {
+        if (elemTypeSelect) elemTypeSelect.disabled = false;
+        if (elemRow) elemRow.style.opacity = '1';
+        onGearElementTypeChange();
+    }
+}
+
+function onGearCharSelectChange(charId) {
+    const safeCharacters = Array.isArray(characters) ? characters : [];
+    const char = safeCharacters.find(c => isSameId(c.id, charId));
+
+    const charSelect = document.getElementById('gear-char-select');
+    if (charSelect && charId) {
+        charSelect.value = charId;
+    }
+
     const avatarNameEl = document.getElementById('flyff-avatar-char-name');
     if (avatarNameEl) {
         avatarNameEl.innerText = char ? char.name : 'Personaje';
     }
 
     refreshFlyffSlotLabels(charId);
-
-    const currentActiveSlot = slotToSelect || document.getElementById('gear-selected-slot')?.value || 'weapon';
-    selectFlyffSlot(currentActiveSlot);
 }
 
 function refreshFlyffSlotLabels(charId) {
     const safeGear = characterGear || [];
-    const charItems = safeGear.filter(g => String(g.character_id) === String(charId));
-    
+    const charItems = safeGear.filter(g => isSameId(g.character_id, charId));
+
     Object.keys(FLYFF_SLOT_LABELS).forEach(slotKey => {
         const slotBtn = document.querySelector(`.flyff-slot[data-slot="${slotKey}"]`);
         const nameEl = document.getElementById(`slot-name-${slotKey}`);
@@ -3380,76 +3574,240 @@ function refreshFlyffSlotLabels(charId) {
     });
 }
 
-function selectFlyffSlot(slotKey) {
+let _currentGearItemsList = [];
+
+function filterGearCatalogByClass() {
+    const slotKey = document.getElementById('gear-selected-slot')?.value || 'weapon';
+    const currentCharId = document.getElementById('gear-char-select')?.value;
+    const char = (typeof characters !== 'undefined' && characters) ? characters.find(c => isSameId(c.id, currentCharId)) : null;
+    const charClass = char ? (char.class_name || char.job || '') : '';
+    const isChecked = document.getElementById('gear-class-filter-check')?.checked;
+
+    let catalogItems = (gearCatalog && gearCatalog.categories)
+        ? (gearCatalog.categories[slotKey] || (slotKey.startsWith('talisman') ? gearCatalog.categories['talisman'] : []))
+        : [];
+    let filteredItems = catalogItems;
+
+    if (isChecked && charClass) {
+        if (slotKey === 'weapon' && gearCatalog?.categories?.weapon_by_class?.[charClass]) {
+            filteredItems = gearCatalog.categories.weapon_by_class[charClass];
+        }
+        else if (['suit_head', 'suit_body', 'suit_gloves', 'suit_shoes'].includes(slotKey) && gearCatalog?.categories?.armor_by_class?.[charClass]) {
+            const classArmors = gearCatalog.categories.armor_by_class[charClass];
+            let slotKw = [];
+            if (slotKey === 'suit_head') slotKw = ['helm', 'cap', 'hat', 'mask', 'crown'];
+            else if (slotKey === 'suit_body') slotKw = ['suit', 'armor', 'vest', 'robe', 'shirt', 'set'];
+            else if (slotKey === 'suit_gloves') slotKw = ['gaunt', 'glove', 'muffler', 'bracer'];
+            else if (slotKey === 'suit_shoes') slotKw = ['boot', 'shoe'];
+
+            const classSlotArmors = classArmors.filter(item => slotKw.some(k => item.toLowerCase().includes(k)));
+            filteredItems = classSlotArmors.length > 0 ? classSlotArmors : classArmors;
+        }
+    }
+
+    if (!filteredItems || filteredItems.length === 0) {
+        filteredItems = catalogItems.length > 0 ? catalogItems : [];
+    }
+
+    const currentSearchVal = document.getElementById('gear-name-search')?.value;
+    if (currentSearchVal && !filteredItems.includes(currentSearchVal)) {
+        filteredItems = [currentSearchVal, ...filteredItems];
+    }
+
+    _currentGearItemsList = filteredItems;
+
+    const searchInput = document.getElementById('gear-name-search');
+    if (searchInput) {
+        renderGearNameDropdown(filteredItems, searchInput.value || '');
+    }
+}
+
+function renderGearNameDropdown(items, filter = '') {
+    const dropdown = document.getElementById('gear-name-dropdown');
+    if (!dropdown) return;
+
+    const lowerFilter = filter.toLowerCase();
+    const filtered = lowerFilter ? items.filter(item => item.toLowerCase().includes(lowerFilter)) : items;
+
+    if (filtered.length === 0) {
+        dropdown.innerHTML = '<div style="padding:8px 12px; color:rgba(255,255,255,0.4); font-size:0.85rem;">Sin resultados</div>';
+    } else {
+        dropdown.innerHTML = filtered.map(item =>
+            `<div class="gear-dropdown-option" style="padding:7px 12px; cursor:pointer; font-size:0.85rem; color:white; border-bottom:1px solid rgba(255,255,255,0.05);"
+                  onmousedown="selectGearNameOption('${item.replace(/'/g, "\\'")}')"
+                  onmouseenter="this.style.background='rgba(99,102,241,0.3)'"
+                  onmouseleave="this.style.background='transparent'">${item}</div>`
+        ).join('');
+    }
+}
+
+function showGearNameDropdown() {
+    const dropdown = document.getElementById('gear-name-dropdown');
+    const searchInput = document.getElementById('gear-name-search');
+    if (dropdown) {
+        renderGearNameDropdown(_currentGearItemsList, searchInput?.value || '');
+        dropdown.style.display = 'block';
+    }
+}
+
+function hideGearNameDropdown() {
+    const dropdown = document.getElementById('gear-name-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+}
+
+function filterGearNameDropdown(value) {
+    renderGearNameDropdown(_currentGearItemsList, value);
+    const dropdown = document.getElementById('gear-name-dropdown');
+    if (dropdown) dropdown.style.display = 'block';
+
+    const hiddenSelect = document.getElementById('gear-name-select');
+    if (hiddenSelect) hiddenSelect.value = value;
+}
+
+function selectGearNameOption(itemName) {
+    const searchInput = document.getElementById('gear-name-search');
+    const hiddenSelect = document.getElementById('gear-name-select');
+    if (searchInput) searchInput.value = itemName;
+    if (hiddenSelect) hiddenSelect.value = itemName;
+    hideGearNameDropdown();
+}
+
+document.addEventListener('click', function (e) {
+    const searchInput = document.getElementById('gear-name-search');
+    const dropdown = document.getElementById('gear-name-dropdown');
+    if (searchInput && dropdown && !searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+        hideGearNameDropdown();
+    }
+});
+
+function closeSlotItemModal() {
+    const modal = document.getElementById('slot-item-modal');
+    if (modal) {
+        modal.classList.remove('show');
+        modal.style.display = 'none';
+    }
+    hideGearNameDropdown();
+}
+
+function selectFlyffSlot(slotKey, specificGearId = null) {
+    populateGearCharSelects();
+
     document.querySelectorAll('.flyff-slot').forEach(btn => btn.classList.remove('active'));
     const targetBtn = document.querySelector(`.flyff-slot[data-slot="${slotKey}"]`);
     if (targetBtn) targetBtn.classList.add('active');
 
-    document.getElementById('gear-selected-slot').value = slotKey;
+    const slotSelectedInput = document.getElementById('gear-selected-slot');
+    if (slotSelectedInput) slotSelectedInput.value = slotKey;
 
     const isFashion = slotKey.startsWith('fashion_');
     const category = isFashion ? 'Fashion' : 'Combat';
     const slotTitle = FLYFF_SLOT_LABELS[slotKey] || slotKey;
 
-    const titleEl = document.getElementById('selected-slot-title');
-    const badgeEl = document.getElementById('selected-slot-badge');
+    const modalTitleEl = document.getElementById('slot-modal-title');
+    const modalBadgeEl = document.getElementById('slot-modal-badge');
 
-    if (titleEl) titleEl.innerText = slotTitle;
-    if (badgeEl) {
-        badgeEl.innerText = category;
-        badgeEl.style.background = isFashion ? '#ec4899' : 'var(--primary)';
+    if (modalTitleEl) modalTitleEl.innerHTML = `<i class="fa-solid fa-box-archive"></i> Configurar ${slotTitle}`;
+    if (modalBadgeEl) {
+        modalBadgeEl.innerText = category;
+        modalBadgeEl.style.background = isFashion ? '#ec4899' : 'var(--primary)';
     }
+
+    const currentCharId = document.getElementById('gear-char-select')?.value;
+    const char = (typeof characters !== 'undefined' && characters) ? characters.find(c => isSameId(c.id, currentCharId)) : null;
+    const charClass = char ? (char.class_name || char.job || 'Sin Clase') : 'Sin Clase';
+
+    const classLabelEl = document.getElementById('gear-class-label');
+    if (classLabelEl) classLabelEl.innerText = charClass;
+
+    filterGearCatalogByClass();
+    updatePiercingForSlot(slotKey);
+    updateRefineForSlot(slotKey);
 
     const nameSelect = document.getElementById('gear-name-select');
-    let catalogItems = (gearCatalog && gearCatalog.categories) ? (gearCatalog.categories[slotKey] || []) : [];
-    
-    if (catalogItems.length === 0) {
-        catalogItems = ['Item Estándar'];
+    const nameSearch = document.getElementById('gear-name-search');
+    const safeGear = characterGear || [];
+    let equipped = null;
+    if (specificGearId) {
+        equipped = safeGear.find(g => isSameId(g.id, specificGearId));
+    } else {
+        equipped = safeGear.find(g => isSameId(g.character_id, currentCharId) && g.slot === slotKey);
     }
 
-    nameSelect.innerHTML = catalogItems.map(item => `<option value="${item}">${item}</option>`).join('');
-
-    const safeGear = characterGear || [];
-    const currentCharId = document.getElementById('gear-char-select')?.value;
-    const equipped = safeGear.find(g => String(g.character_id) === String(currentCharId) && g.slot === slotKey);
-
     const idInput = document.getElementById('gear-id-input');
+    const targetCharSelect = document.getElementById('gear-target-char-select');
     const refineSelect = document.getElementById('gear-refine-select');
-    const elemSelect = document.getElementById('gear-element-select');
+    const elemTypeSelect = document.getElementById('gear-element-type-select');
+    const elemRefineSelect = document.getElementById('gear-element-refine-select');
     const cardSelect = document.getElementById('gear-card-select');
     const noteInput = document.getElementById('gear-note-input');
+    const slotCfg = getSlotConfig(slotKey);
 
     if (equipped) {
         if (idInput) idInput.value = equipped.id;
-        if (nameSelect) nameSelect.value = equipped.item_name;
-        if (refineSelect) refineSelect.value = equipped.refine_level || '+0';
-        if (elemSelect) elemSelect.value = equipped.element || 'Ninguno';
-        if (cardSelect) cardSelect.value = equipped.card_pierce || 'Sin Piercings (0/4)';
+        if (targetCharSelect) targetCharSelect.value = equipped.character_id || currentCharId;
+        if (nameSelect) nameSelect.value = equipped.item_name || '';
+        if (nameSearch) nameSearch.value = equipped.item_name || '';
+        if (refineSelect && slotCfg.allow_refine) refineSelect.value = equipped.refine_level || '+0';
+
+        const parsedElem = parseElementAndRefine(equipped.element);
+        if (elemTypeSelect && slotCfg.allow_element) {
+            elemTypeSelect.value = parsedElem.type;
+            onGearElementTypeChange();
+            if (elemRefineSelect) elemRefineSelect.value = parsedElem.refine;
+        }
+
+        if (cardSelect) cardSelect.value = equipped.card_pierce || 'Sin Piercings';
         if (noteInput) noteInput.value = equipped.note || '';
     } else {
         if (idInput) idInput.value = '';
+        if (targetCharSelect) targetCharSelect.value = currentCharId;
+        if (nameSearch) nameSearch.value = '';
+        if (nameSelect) nameSelect.value = '';
         if (refineSelect) refineSelect.value = '+0';
-        if (elemSelect) elemSelect.value = 'Ninguno';
-        if (cardSelect) cardSelect.value = 'Sin Piercings (0/4)';
+        if (elemTypeSelect) {
+            elemTypeSelect.value = 'Ninguno';
+            onGearElementTypeChange();
+        }
+        if (elemRefineSelect) elemRefineSelect.value = '+0';
+        if (cardSelect) cardSelect.value = 'Sin Piercings';
         if (noteInput) noteInput.value = '';
+    }
+
+    hideGearNameDropdown();
+
+    const slotModal = document.getElementById('slot-item-modal');
+    if (slotModal) {
+        slotModal.style.display = 'flex';
+        slotModal.classList.add('show');
     }
 }
 
 async function submitGearForm() {
-    const id = document.getElementById('gear-id-input').value;
-    const slotKey = document.getElementById('gear-selected-slot').value;
-    const charId = document.getElementById('gear-char-select').value;
+    const id = document.getElementById('gear-id-input')?.value;
+    const slotKey = document.getElementById('gear-selected-slot')?.value || 'weapon';
+    const charId = document.getElementById('gear-char-select')?.value;
+    const targetCharId = document.getElementById('gear-target-char-select')?.value || charId;
     const isFashion = slotKey.startsWith('fashion_');
 
+    const itemName = (document.getElementById('gear-name-select')?.value || document.getElementById('gear-name-search')?.value || '').trim();
+    if (!itemName) {
+        alert('Por favor ingrese o seleccione un ítem para el equipamiento.');
+        return;
+    }
+
+    const elemType = document.getElementById('gear-element-type-select')?.value || 'Ninguno';
+    const elemRefine = document.getElementById('gear-element-refine-select')?.value || '+0';
+    const formattedElement = formatElementAndRefine(elemType, elemRefine);
+
     const data = {
-        character_id: charId,
+        character_id: targetCharId,
         gear_category: isFashion ? 'Fashion' : 'Combat',
         slot: slotKey,
-        item_name: document.getElementById('gear-name-select').value,
-        refine_level: document.getElementById('gear-refine-select').value,
-        element: document.getElementById('gear-element-select').value,
-        card_pierce: document.getElementById('gear-card-select').value,
-        note: document.getElementById('gear-note-input').value.trim()
+        item_name: itemName,
+        refine_level: document.getElementById('gear-refine-select')?.value || '+0',
+        element: formattedElement,
+        card_pierce: document.getElementById('gear-card-select')?.value || 'Sin Piercings',
+        note: (document.getElementById('gear-note-input')?.value || '').trim()
     };
 
     const method = id ? 'PUT' : 'POST';
@@ -3462,25 +3820,26 @@ async function submitGearForm() {
             body: JSON.stringify(data)
         });
         if (res.ok) {
-            const savedItem = await res.json();
-            if (!id && savedItem && savedItem.id) {
-                document.getElementById('gear-id-input').value = savedItem.id;
-            }
+            closeSlotItemModal();
             await fetchGearData();
-            refreshFlyffSlotLabels(charId);
-            selectFlyffSlot(slotKey);
+            if (targetCharId) {
+                const charSelect = document.getElementById('gear-char-select');
+                if (charSelect) charSelect.value = targetCharId;
+                refreshFlyffSlotLabels(targetCharId);
+            }
         } else {
-            alert('Error al guardar equipamiento');
+            const err = await res.json().catch(() => ({}));
+            alert('Error al guardar equipamiento: ' + (err.error || 'Error del servidor'));
         }
     } catch (e) {
-        console.error(e);
+        console.error('Error al guardar equipamiento:', e);
     }
 }
 
 async function unequipCurrentSlot() {
-    const id = document.getElementById('gear-id-input').value;
-    const charId = document.getElementById('gear-char-select').value;
-    const slotKey = document.getElementById('gear-selected-slot').value;
+    const id = document.getElementById('gear-id-input')?.value;
+    const charId = document.getElementById('gear-char-select')?.value;
+    const slotKey = document.getElementById('gear-selected-slot')?.value;
 
     if (!id) {
         alert('Este slot ya está vacío.');
@@ -3492,98 +3851,221 @@ async function unequipCurrentSlot() {
     try {
         const res = await fetch(`${API_URL}/gear/${id}`, { method: 'DELETE' });
         if (res.ok) {
+            closeSlotItemModal();
             await fetchGearData();
-            refreshFlyffSlotLabels(charId);
-            selectFlyffSlot(slotKey);
+            if (charId) refreshFlyffSlotLabels(charId);
         }
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error('Error desequipando:', e); }
+}
+
+async function moveGearToCharacter(gearId, targetCharId) {
+    if (!gearId || !targetCharId) return;
+    const item = (characterGear || []).find(g => isSameId(g.id, gearId));
+    if (!item) return;
+
+    const data = { ...item, character_id: targetCharId };
+    try {
+        const res = await fetch(`${API_URL}/gear/${gearId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (res.ok) {
+            await fetchGearData();
+            const activeCharId = document.getElementById('gear-char-select')?.value;
+            if (activeCharId) refreshFlyffSlotLabels(activeCharId);
+        } else {
+            alert('Error al transferir equipamiento.');
+        }
+    } catch (e) {
+        console.error('Error transfiriendo equipamiento:', e);
+    }
 }
 
 async function deleteGearItem(id) {
-    if (!confirm(i18n('msg_confirm_delete'))) return;
+    if (!confirm(i18n('msg_confirm_delete') || '¿Eliminar este ítem de equipamiento?')) return;
     try {
         const res = await fetch(`${API_URL}/gear/${id}`, { method: 'DELETE' });
-        if (res.ok) fetchGearData();
-    } catch (e) { console.error(e); }
+        if (res.ok) await fetchGearData();
+    } catch (e) { console.error('Error eliminando ítem:', e); }
+}
+
+function openSlotItemModalByGearId(gearId) {
+    populateGearCharSelects();
+    const safeGear = Array.isArray(characterGear) ? characterGear : [];
+    const item = safeGear.find(g => isSameId(g.id, gearId));
+    if (!item) return;
+
+    const charSelect = document.getElementById('gear-char-select');
+    if (charSelect && item.character_id) {
+        charSelect.value = item.character_id;
+    }
+
+    selectFlyffSlot(item.slot, gearId);
 }
 
 function renderGearView() {
     const grid = document.getElementById('gear-grid');
     if (!grid) return;
 
-    const charFilter = document.getElementById('gear-char-filter')?.value;
-    const catFilter = document.getElementById('gear-cat-filter')?.value;
+    const safeCharacters = Array.isArray(characters) ? characters : [];
     const searchText = (document.getElementById('gear-search')?.value || '').toLowerCase().trim();
 
-    let filteredChars = characters;
-    if (charFilter) {
-        filteredChars = characters.filter(c => String(c.id) === String(charFilter));
+    let html = '';
+    const charIdsInList = new Set();
+
+    // Global Search Header Panel
+    if (searchText) {
+        const matchingGear = (characterGear || []).filter(g =>
+            (g.item_name || '').toLowerCase().includes(searchText) ||
+            (g.slot || '').toLowerCase().includes(searchText) ||
+            (g.refine_level || '').toLowerCase().includes(searchText) ||
+            (g.element || '').toLowerCase().includes(searchText) ||
+            (FLYFF_SLOT_LABELS[g.slot] || '').toLowerCase().includes(searchText)
+        );
+
+        if (matchingGear.length > 0) {
+            html += `
+            <div style="grid-column: 1 / -1; background: rgba(99, 102, 241, 0.1); border: 1px solid var(--primary); border-radius: 12px; padding: 15px; margin-bottom: 10px;">
+                <h4 style="margin: 0 0 10px 0; color: var(--primary); font-size: 1rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-magnifying-glass"></i> Resultados de Búsqueda Global ("${searchText}"): ${matchingGear.length} coincidencia(s)
+                </h4>
+                <div style="display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto;">
+                    ${matchingGear.map(g => {
+                        const char = safeCharacters.find(c => isSameId(c.id, g.character_id));
+                        const charName = char ? char.name : 'Sin Asignar / Alijo';
+                        const charClass = char ? (char.class_name || 'Sin Clase') : '';
+                        const slotName = FLYFF_SLOT_LABELS[g.slot] || g.slot;
+                        return `
+                            <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <span style="font-weight: 700; color: #ffffff; font-size: 0.92rem;">${g.item_name}</span>
+                                    ${g.refine_level && g.refine_level !== '+0' ? `<span style="color:#f59e0b; font-weight:700; margin-left:6px;">(${g.refine_level})</span>` : ''}
+                                    ${g.element && g.element !== 'Ninguno' ? `<span style="color:#38bdf8; font-weight:600; margin-left:6px;">[${g.element}]</span>` : ''}
+                                    <div style="font-size: 0.78rem; opacity: 0.75; margin-top: 2px;">
+                                        <span>Ranura: <strong>${slotName}</strong></span> | 
+                                        <span>Personaje: <strong style="color:var(--primary);">${charName}</strong> ${charClass ? `(${charClass})` : ''}</span>
+                                    </div>
+                                </div>
+                                <button class="btn-secondary" style="padding: 4px 10px; font-size: 0.8rem; border-radius: 6px; cursor: pointer;" onclick="${char ? `openGearModalForChar(${char.id})` : `openSlotItemModalByGearId(${g.id})`}">
+                                    <i class="fa-solid fa-eye"></i> Ver Inventario
+                                </button>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+            `;
+        }
     }
 
-    let html = '';
-    filteredChars.forEach(char => {
-        let itemsForChar = (characterGear || []).filter(g => String(g.character_id) === String(char.id));
-        if (catFilter) {
-            itemsForChar = itemsForChar.filter(g => (g.gear_category || 'Combat') === catFilter);
-        }
-        if (searchText) {
-            itemsForChar = itemsForChar.filter(g => 
+    safeCharacters.forEach(char => {
+        charIdsInList.add(String(char.id));
+        let itemsForChar = (characterGear || []).filter(g => isSameId(g.character_id, char.id));
+        const charMatches = (char.name || '').toLowerCase().includes(searchText) || (char.class_name || '').toLowerCase().includes(searchText);
+
+        if (searchText && !charMatches) {
+            itemsForChar = itemsForChar.filter(g =>
                 (g.item_name || '').toLowerCase().includes(searchText) ||
                 (g.slot || '').toLowerCase().includes(searchText) ||
-                (g.note || '').toLowerCase().includes(searchText)
+                (g.note || '').toLowerCase().includes(searchText) ||
+                (FLYFF_SLOT_LABELS[g.slot] || '').toLowerCase().includes(searchText)
             );
         }
 
-        if (itemsForChar.length > 0 || !searchText) {
+        if (itemsForChar.length > 0 || !searchText || charMatches) {
             html += `
-            <div class="card glass-panel" style="display:flex; flex-direction:column; gap:10px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--glass-border); padding-bottom:8px;">
-                    <div>
-                        <h3 style="margin:0; color:var(--primary); font-size:1.1rem;">${char.name}</h3>
-                        <span style="font-size:0.8rem; opacity:0.7;">Lvl ${char.level} - ${char.class_name || 'Sin Clase'}</span>
+            <div class="card glass-panel" style="display:flex; flex-direction:column; justify-content:space-between; gap:12px; transition:transform 0.2s ease;" onmouseenter="this.style.borderColor='var(--primary)'" onmouseleave="this.style.borderColor='var(--glass-border)'">
+                <div>
+                    <!-- Header -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--glass-border); padding-bottom:10px;">
+                        <div>
+                            <h3 style="margin:0; color:var(--primary); font-size:1.15rem; display:flex; align-items:center; gap:8px;">
+                                <i class="fa-solid fa-user-shield"></i> ${char.name}
+                            </h3>
+                            <span style="font-size:0.8rem; opacity:0.75;">Lvl ${char.level} - ${char.class_name || 'Sin Clase'}</span>
+                        </div>
+                        <span style="background:rgba(212,175,55,0.15); border:1px solid rgba(212,175,55,0.3); color:var(--primary); font-weight:700; font-size:0.75rem; padding:4px 10px; border-radius:12px;">
+                            <i class="fa-solid fa-shield-halved"></i> ${itemsForChar.length} Ítems
+                        </span>
                     </div>
-                    <button class="btn-secondary" style="font-size:0.75rem; padding:4px 8px;" onclick="openGearModalForChar(${char.id})">
-                        <i class="fa-solid fa-pen-to-square"></i> Editar Equipamiento
-                    </button>
-                </div>
-                <div style="display:flex; flex-direction:column; gap:8px;">
+
+                    <!-- Compact Chips Preview -->
+                    <div style="margin-top:10px;">
             `;
 
             if (itemsForChar.length === 0) {
-                html += `<p style="font-size:0.85rem; opacity:0.5; margin:5px 0;">Sin equipamiento registrado.</p>`;
+                html += `<p style="font-size:0.85rem; opacity:0.5; margin:8px 0; font-style:italic;">Sin equipamiento registrado.</p>`;
             } else {
+                html += `<div style="display:flex; flex-wrap:wrap; gap:6px; max-height:110px; overflow-y:auto; padding-right:4px;">`;
                 itemsForChar.forEach(g => {
                     const isFashion = g.gear_category === 'Fashion';
                     const badgeColor = isFashion ? '#ec4899' : 'var(--primary)';
                     const slotName = FLYFF_SLOT_LABELS[g.slot] || g.slot;
 
                     html += `
-                    <div style="background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:8px 12px; display:flex; justify-content:space-between; align-items:center;">
-                        <div>
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <span style="background:${badgeColor}; color:#000; font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px; text-transform:uppercase;">
-                                    ${slotName}
-                                </span>
-                                <strong style="color:white; font-size:0.95rem;">${g.item_name} ${g.refine_level && g.refine_level !== '+0' ? `<span style="color:#f59e0b;">(${g.refine_level})</span>` : ''}</strong>
-                            </div>
-                            <div style="font-size:0.8rem; opacity:0.8; margin-top:3px; display:flex; gap:10px; flex-wrap:wrap;">
-                                ${g.element && g.element !== 'Ninguno' ? `<span><i class="fa-solid fa-fire-flame-curved" style="color:#ef4444;"></i> ${g.element}</span>` : ''}
-                                ${g.card_pierce && !g.card_pierce.includes('Sin Piercings') && g.card_pierce !== 'Ninguna' ? `<span><i class="fa-solid fa-gem" style="color:#3b82f6;"></i> ${g.card_pierce}</span>` : ''}
-                                ${g.note ? `<span style="font-style:italic; opacity:0.7;">"${g.note}"</span>` : ''}
-                            </div>
-                        </div>
-                        <div style="display:flex; gap:5px;">
-                            <button class="icon-btn" onclick='openGearModal(${JSON.stringify(g).replace(/'/g, "&apos;")})' title="Editar"><i class="fa-solid fa-pen"></i></button>
-                            <button class="icon-btn delete" onclick="deleteGearItem(${g.id})" title="Eliminar"><i class="fa-solid fa-trash-can"></i></button>
-                        </div>
+                    <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:4px 8px; font-size:0.78rem; display:flex; align-items:center; gap:6px; cursor:pointer;" onclick="openSlotItemModalByGearId(${g.id})" title="Editar / Mover ${g.item_name}">
+                        <span style="color:${badgeColor}; font-weight:700;">${slotName}:</span>
+                        <span style="color:white; font-weight:600;">${g.item_name} ${g.refine_level && g.refine_level !== '+0' ? `<span style="color:#f59e0b;">(${g.refine_level})</span>` : ''}</span>
                     </div>
                     `;
                 });
+                html += `</div>`;
             }
 
-            html += `</div></div>`;
+            html += `
+                    </div>
+                </div>
+
+                <!-- Action Button -->
+                <button class="btn-primary" style="width:100%; padding:9px; font-weight:700; font-size:0.88rem; display:flex; align-items:center; justify-content:center; gap:8px; border-radius:8px; cursor:pointer;" onclick="openGearModalForChar(${char.id})">
+                    <i class="fa-solid fa-shirt"></i> Abrir Inventario Grid
+                </button>
+            </div>
+            `;
         }
     });
+
+    // Handle unassigned gear items (if any)
+    const unassignedItems = (characterGear || []).filter(g => !g.character_id || !Array.from(charIdsInList).some(cId => isSameId(cId, g.character_id)));
+    if (unassignedItems.length > 0) {
+        html += `
+        <div class="card glass-panel" style="display:flex; flex-direction:column; justify-content:space-between; gap:12px; border-color:rgba(239, 68, 68, 0.4);">
+            <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--glass-border); padding-bottom:10px;">
+                    <div>
+                        <h3 style="margin:0; color:#ef4444; font-size:1.15rem; display:flex; align-items:center; gap:8px;">
+                            <i class="fa-solid fa-box-open"></i> Sin Asignar / Banco
+                        </h3>
+                        <span style="font-size:0.8rem; opacity:0.75;">Ítems en alijo general</span>
+                    </div>
+                    <span style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:#ef4444; font-weight:700; font-size:0.75rem; padding:4px 10px; border-radius:12px;">
+                        ${unassignedItems.length} Ítems
+                    </span>
+                </div>
+                <div style="margin-top:10px; display:flex; flex-wrap:wrap; gap:6px; max-height:110px; overflow-y:auto;">
+        `;
+        unassignedItems.forEach(g => {
+            const isFashion = g.gear_category === 'Fashion';
+            const badgeColor = isFashion ? '#ec4899' : 'var(--primary)';
+            const slotName = FLYFF_SLOT_LABELS[g.slot] || g.slot;
+
+            html += `
+            <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:4px 8px; font-size:0.78rem; display:flex; align-items:center; gap:6px; cursor:pointer;" onclick="openSlotItemModalByGearId(${g.id})" title="Editar / Asignar ${g.item_name}">
+                <span style="color:${badgeColor}; font-weight:700;">${slotName}:</span>
+                <span style="color:white; font-weight:600;">${g.item_name} ${g.refine_level && g.refine_level !== '+0' ? `<span style="color:#f59e0b;">(${g.refine_level})</span>` : ''}</span>
+            </div>
+            `;
+        });
+        html += `
+                </div>
+            </div>
+            <button class="btn-secondary" style="width:100%; padding:9px; font-weight:700; font-size:0.88rem; display:flex; align-items:center; justify-content:center; gap:8px; border-radius:8px;" onclick="openGearModal()">
+                <i class="fa-solid fa-arrow-right-arrow-left"></i> Asignar Equipamiento
+            </button>
+        </div>
+        `;
+    }
 
     grid.innerHTML = html || `<p style="grid-column: 1/-1; text-align:center; opacity:0.5;">No se encontraron ítems de equipamiento.</p>`;
 }
@@ -3713,10 +4195,10 @@ function renderRoutinesView() {
         `;
 
         targetChars.forEach(char => {
-            const isDone = routineProgress.some(p => 
-                String(p.task_id) === String(task.id) && 
-                String(p.character_id) === String(char.id) && 
-                p.completed_date === today && 
+            const isDone = routineProgress.some(p =>
+                String(p.task_id) === String(task.id) &&
+                String(p.character_id) === String(char.id) &&
+                p.completed_date === today &&
                 (p.is_completed === true || p.is_completed === 'true' || p.is_completed === 'True')
             );
 
@@ -3750,21 +4232,101 @@ async function fetchExpiringData() {
     } catch (e) { console.error('Error fetching expiring items:', e); }
 }
 
+function renderExpiringCharDropdown(filterText = '') {
+    const dropdown = document.getElementById('expiring-char-dropdown');
+    if (!dropdown) return;
+
+    const safeCharacters = Array.isArray(characters) ? characters : [];
+    const lowerFilter = filterText.toLowerCase().trim();
+
+    let filtered = safeCharacters;
+    if (lowerFilter) {
+        filtered = safeCharacters.filter(c =>
+            (c.name || '').toLowerCase().includes(lowerFilter) ||
+            (c.class_name || '').toLowerCase().includes(lowerFilter)
+        );
+    }
+
+    let html = `
+    <div class="expiring-char-option" style="padding:8px 12px; cursor:pointer; font-size:0.85rem; color:rgba(255,255,255,0.6); border-bottom:1px solid rgba(255,255,255,0.05);"
+          onmousedown="selectExpiringChar('', '(Sin asignar a personaje)')"
+          onmouseenter="this.style.background='rgba(99,102,241,0.3)'"
+          onmouseleave="this.style.background='transparent'">(Sin asignar a personaje)</div>
+    `;
+
+    if (filtered.length === 0 && lowerFilter) {
+        html += '<div style="padding:8px 12px; color:rgba(255,255,255,0.4); font-size:0.85rem;">Sin resultados</div>';
+    } else {
+        filtered.forEach(c => {
+            const displayName = `${c.name} (Lvl ${c.level} ${c.class_name || ''})`.trim();
+            const safeName = displayName.replace(/'/g, "\\'");
+            html += `
+            <div class="expiring-char-option" style="padding:8px 12px; cursor:pointer; font-size:0.85rem; color:white; border-bottom:1px solid rgba(255,255,255,0.05);"
+                  onmousedown="selectExpiringChar('${c.id}', '${safeName}')"
+                  onmouseenter="this.style.background='rgba(99,102,241,0.3)'"
+                  onmouseleave="this.style.background='transparent'">${displayName}</div>
+            `;
+        });
+    }
+
+    dropdown.innerHTML = html;
+}
+
+function showExpiringCharDropdown() {
+    const dropdown = document.getElementById('expiring-char-dropdown');
+    const searchInput = document.getElementById('expiring-char-search');
+    if (dropdown) {
+        renderExpiringCharDropdown(searchInput?.value || '');
+        dropdown.style.display = 'block';
+    }
+}
+
+function hideExpiringCharDropdown() {
+    const dropdown = document.getElementById('expiring-char-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+}
+
+function filterExpiringCharDropdown(value) {
+    renderExpiringCharDropdown(value);
+    const dropdown = document.getElementById('expiring-char-dropdown');
+    if (dropdown) dropdown.style.display = 'block';
+
+    const hiddenSelect = document.getElementById('expiring-char-select');
+    if (hiddenSelect) hiddenSelect.value = '';
+}
+
+function selectExpiringChar(charId, displayName) {
+    const searchInput = document.getElementById('expiring-char-search');
+    const hiddenSelect = document.getElementById('expiring-char-select');
+    if (searchInput) searchInput.value = displayName;
+    if (hiddenSelect) hiddenSelect.value = charId;
+    hideExpiringCharDropdown();
+}
+
+document.addEventListener('click', function (e) {
+    const searchInput = document.getElementById('expiring-char-search');
+    const dropdown = document.getElementById('expiring-char-dropdown');
+    if (searchInput && dropdown && !searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+        hideExpiringCharDropdown();
+    }
+});
+
 function openExpiringModal(item = null) {
     const modal = document.getElementById('expiring-modal');
     if (!modal) return;
 
-    const charSelect = document.getElementById('expiring-char-select');
-    let charHtml = '<option value="">(Sin asignar a personaje)</option>';
-    characters.forEach(c => {
-        charHtml += `<option value="${c.id}">${c.name} (Lvl ${c.level})</option>`;
-    });
-    charSelect.innerHTML = charHtml;
+    const charSearchInput = document.getElementById('expiring-char-search');
+    const charSelectInput = document.getElementById('expiring-char-select');
 
     if (item) {
         document.getElementById('expiring-modal-title').innerText = 'Editar Ítem Temporal';
         document.getElementById('expiring-id-input').value = item.id;
-        document.getElementById('expiring-char-select').value = item.character_id || '';
+
+        const safeChars = Array.isArray(characters) ? characters : [];
+        const char = safeChars.find(c => isSameId(c.id, item.character_id));
+        if (charSelectInput) charSelectInput.value = item.character_id || '';
+        if (charSearchInput) charSearchInput.value = char ? `${char.name} (Lvl ${char.level} ${char.class_name || ''})`.trim() : '';
+
         document.getElementById('expiring-name-input').value = item.item_name;
         document.getElementById('expiring-cat-select').value = item.item_category || 'Ticket VIP';
         document.getElementById('expiring-date-input').value = item.expiration_date || '';
@@ -3772,18 +4334,23 @@ function openExpiringModal(item = null) {
     } else {
         document.getElementById('expiring-modal-title').innerText = 'Registrar Ítem Temporal';
         document.getElementById('expiring-id-input').value = '';
+        if (charSelectInput) charSelectInput.value = '';
+        if (charSearchInput) charSearchInput.value = '';
         document.getElementById('expiring-name-input').value = '';
         document.getElementById('expiring-note-input').value = '';
-        
+
         const future = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
         document.getElementById('expiring-date-input').value = future.toISOString().slice(0, 16);
     }
+
+    hideExpiringCharDropdown();
     modal.classList.add('show');
 }
 
 function closeExpiringModal() {
     const modal = document.getElementById('expiring-modal');
     if (modal) modal.classList.remove('show');
+    hideExpiringCharDropdown();
 }
 
 async function submitExpiringForm() {
@@ -3791,10 +4358,13 @@ async function submitExpiringForm() {
     const name = document.getElementById('expiring-name-input').value.trim();
     const expDate = document.getElementById('expiring-date-input').value;
 
-    if (!name || !expDate) return;
+    if (!name || !expDate) {
+        alert('Por favor ingresa el nombre del ítem y la fecha de expiración.');
+        return;
+    }
 
     const data = {
-        character_id: document.getElementById('expiring-char-select').value || '',
+        character_id: document.getElementById('expiring-char-select')?.value || '',
         item_name: name,
         item_category: document.getElementById('expiring-cat-select').value,
         expiration_date: expDate,
@@ -3814,7 +4384,7 @@ async function submitExpiringForm() {
             closeExpiringModal();
             fetchExpiringData();
         }
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error('Error al guardar ítem temporal:', e); }
 }
 
 async function deleteExpiringItem(id) {
@@ -3963,5 +4533,18 @@ function closeConfigModal() {
     const modal = document.getElementById('config-modal');
     if (modal) modal.classList.remove('show');
 }
+
+// Global Keyboard Shortcuts: Escape key closes active modals
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const modals = document.querySelectorAll('.modal.show');
+        modals.forEach(modal => {
+            modal.classList.remove('show');
+            if (modal.style.display === 'flex') modal.style.display = 'none';
+        });
+        if (typeof hideGearNameDropdown === 'function') hideGearNameDropdown();
+        if (typeof hideExpiringCharDropdown === 'function') hideExpiringCharDropdown();
+    }
+});
 
 

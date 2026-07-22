@@ -5,7 +5,12 @@ from ..excel_db import ExcelDB
 
 bp = Blueprint('gear', __name__, url_prefix='/api/gear')
 
-CATALOG_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'flyff_catalog.json')
+# Single unified catalog directory at project root (catalogo/)
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+CATALOG_DIR = os.path.join(ROOT_DIR, 'catalogo')
+
+CATALOG_FILE = os.path.join(CATALOG_DIR, 'flyff_catalog.json')
+PIERCING_CATALOG_FILE = os.path.join(CATALOG_DIR, 'piercing_catalog.json')
 
 @bp.route('/catalog', methods=['GET'])
 def get_catalog():
@@ -15,6 +20,17 @@ def get_catalog():
                 data = json.load(f)
                 return jsonify(data)
         return jsonify({"categories": {}, "refines": [], "piercings": [], "elements": [], "cards": []})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@bp.route('/piercing-catalog', methods=['GET'])
+def get_piercing_catalog():
+    try:
+        if os.path.exists(PIERCING_CATALOG_FILE):
+            with open(PIERCING_CATALOG_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                return jsonify(data)
+        return jsonify({"piercing_rules": {}})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

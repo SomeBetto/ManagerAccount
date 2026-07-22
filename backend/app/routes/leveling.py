@@ -4,6 +4,7 @@ from app.excel_db import ExcelDB
 bp = Blueprint('leveling', __name__, url_prefix='/api/leveling')
 
 @bp.route('', methods=['GET'])
+@bp.route('/levelzone', methods=['GET'])
 def get_level_queue():
     try:
         entries = ExcelDB.get_all('level_entries')

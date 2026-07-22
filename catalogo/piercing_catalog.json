@@ -1,0 +1,137 @@
+{
+  "slot_config": {
+    "weapon": {
+      "label": "Arma Principal",
+      "allow_refine": true,
+      "max_refine": 20,
+      "allow_element": true,
+      "max_piercings": 10
+    },
+    "shield": {
+      "label": "Escudo",
+      "allow_refine": true,
+      "max_refine": 20,
+      "allow_element": true,
+      "max_piercings": 10
+    },
+    "suit_head": {
+      "label": "Casco / Cabeza",
+      "allow_refine": true,
+      "max_refine": 20,
+      "allow_element": true,
+      "max_piercings": 0
+    },
+    "suit_body": {
+      "label": "Pecho / Torso",
+      "allow_refine": true,
+      "max_refine": 20,
+      "allow_element": true,
+      "max_piercings": 4
+    },
+    "suit_gloves": {
+      "label": "Guantes",
+      "allow_refine": true,
+      "max_refine": 20,
+      "allow_element": true,
+      "max_piercings": 0
+    },
+    "suit_shoes": {
+      "label": "Botas / Calzado",
+      "allow_refine": true,
+      "max_refine": 20,
+      "allow_element": true,
+      "max_piercings": 0
+    },
+    "cloak": {
+      "label": "Capa / Alas",
+      "allow_refine": false,
+      "max_refine": 0,
+      "allow_element": false,
+      "max_piercings": 0
+    },
+    "jewelry_ring1": {
+      "label": "Anillo 1",
+      "allow_refine": true,
+      "max_refine": 20,
+      "allow_element": false,
+      "max_piercings": 0
+    },
+    "jewelry_ring2": {
+      "label": "Anillo 2",
+      "allow_refine": true,
+      "max_refine": 20,
+      "allow_element": false,
+      "max_piercings": 0
+    },
+    "jewelry_earring1": {
+      "label": "Pendiente 1",
+      "allow_refine": true,
+      "max_refine": 20,
+      "allow_element": false,
+      "max_piercings": 0
+    },
+    "jewelry_earring2": {
+      "label": "Pendiente 2",
+      "allow_refine": true,
+      "max_refine": 20,
+      "allow_element": false,
+      "max_piercings": 0
+    },
+    "jewelry_necklace": {
+      "label": "Collar",
+      "allow_refine": true,
+      "max_refine": 20,
+      "allow_element": false,
+      "max_piercings": 0
+    },
+    "fashion_head": {
+      "label": "Fashion Head",
+      "allow_refine": true,
+      "max_refine": 10,
+      "allow_element": false,
+      "max_piercings": 0
+    },
+    "fashion_suit": {
+      "label": "Fashion Suit",
+      "allow_refine": true,
+      "max_refine": 10,
+      "allow_element": false,
+      "max_piercings": 0
+    },
+    "fashion_gloves": {
+      "label": "Fashion Gloves",
+      "allow_refine": true,
+      "max_refine": 10,
+      "allow_element": false,
+      "max_piercings": 0
+    },
+    "fashion_shoes": {
+      "label": "Fashion Shoes",
+      "allow_refine": true,
+      "max_refine": 10,
+      "allow_element": false,
+      "max_piercings": 0
+    },
+    "talisman1": {
+      "label": "Talismán 1",
+      "allow_refine": true,
+      "max_refine": 20,
+      "allow_element": false,
+      "max_piercings": 0
+    },
+    "talisman2": {
+      "label": "Talismán 2",
+      "allow_refine": true,
+      "max_refine": 20,
+      "allow_element": false,
+      "max_piercings": 0
+    },
+    "talisman": {
+      "label": "Talismán",
+      "allow_refine": true,
+      "max_refine": 20,
+      "allow_element": false,
+      "max_piercings": 0
+    }
+  }
+}

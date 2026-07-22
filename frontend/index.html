@@ -23,38 +23,82 @@
                 <img src="flyff.ico" alt="Flyff Logo" style="width: 32px; height: 32px; object-fit: contain;">
                 <span>Flyff</span>
             </div>
-            <ul class="nav-links">
-                <li onclick="switchView('dashboard')" class="active"><i class="fa-solid fa-gauge-high"></i> <span
-                        data-i18n="sidebar_dashboard">Dashboard</span></li>
-                <li onclick="switchView('accounts')"><i class="fa-solid fa-user-shield"></i> <span
-                        data-i18n="sidebar_accounts">Accounts</span></li>
-                <li onclick="switchView('characters')"><i class="fa-solid fa-users"></i> <span
-                        data-i18n="sidebar_characters">Characters</span></li>
-                <li onclick="switchView('favorites')"><i class="fa-solid fa-star"></i> <span
-                        data-i18n="sidebar_favorites">Favorites</span></li>
-                <li onclick="switchView('loginzone')"><i class="fa-solid fa-desktop"></i> <span
-                        data-i18n="sidebar_loginzone">Zona de Logeo</span></li>
-                <li onclick="switchView('items')"><i class="fa-solid fa-toolbox"></i> <span
-                        data-i18n="sidebar_items">Important Items</span></li>
-                <li onclick="switchView('vacantes')"><i class="fa-solid fa-door-open"></i> <span
-                        data-i18n="sidebar_vacantes">Vacantes</span></li>
-                <li onclick="switchView('levelzone')"><i class="fa-solid fa-person-falling"></i> <span
-                        data-i18n="sidebar_levelzone">Leveling Zone</span></li>
-                <li onclick="switchView('dailyevent')"><i class="fa-solid fa-calendar-day"></i> <span
-                        data-i18n="sidebar_dailyevent">Daily Events</span></li>
-                <li onclick="switchView('coupons')"><i class="fa-solid fa-ticket"></i> <span
-                        data-i18n="sidebar_coupons">Coupons</span></li>
-                <li onclick="switchView('contadores')"><i class="fa-solid fa-clock"></i> <span
-                        data-i18n="sidebar_contadores">Contadores</span></li>
-                <li onclick="switchView('autotool')"><i class="fa-solid fa-robot"></i> <span
-                        data-i18n="sidebar_autotool">Auto Tool</span></li>
-                <li onclick="switchView('gear')"><i class="fa-solid fa-shield-halved"></i> <span
-                        data-i18n="sidebar_gear">Equipamiento & Fashion</span></li>
-                <li onclick="switchView('routines')"><i class="fa-solid fa-list-check"></i> <span
-                        data-i18n="sidebar_routines">Rutinas Diarias</span></li>
-                <li onclick="switchView('expiring')"><i class="fa-solid fa-hourglass-half"></i> <span
-                        data-i18n="sidebar_expiring">Ítems por Expire</span></li>
-            </ul>
+            <div class="nav-links-container" style="overflow-y: auto; flex: 1; margin-bottom: 0.5rem; padding-right: 4px;">
+                <ul class="nav-links">
+                    <!-- Main & Favorites -->
+                    <li onclick="switchView('dashboard')" class="active" data-view="dashboard">
+                        <i class="fa-solid fa-gauge-high"></i> <span data-i18n="sidebar_dashboard">Dashboard</span>
+                    </li>
+                    <li onclick="switchView('favorites')" data-view="favorites">
+                        <i class="fa-solid fa-star"></i> <span data-i18n="sidebar_favorites">Favorites</span>
+                    </li>
+
+                    <!-- Cuentas y Personajes -->
+                    <li class="nav-group expanded">
+                        <div class="nav-group-header" onclick="toggleNavGroup(this)">
+                            <div style="display:flex; align-items:center;">
+                                <i class="fa-solid fa-users-gear"></i>
+                                <span data-i18n="menu_accounts_chars">Cuentas & Personajes</span>
+                            </div>
+                            <i class="fa-solid fa-chevron-down group-arrow"></i>
+                        </div>
+                        <ul class="nav-group-items">
+                            <li onclick="switchView('accounts')" data-view="accounts"><i class="fa-solid fa-user-shield"></i> <span data-i18n="sidebar_accounts">Accounts</span></li>
+                            <li onclick="switchView('characters')" data-view="characters"><i class="fa-solid fa-users"></i> <span data-i18n="sidebar_characters">Characters</span></li>
+                            <li onclick="switchView('loginzone')" data-view="loginzone"><i class="fa-solid fa-desktop"></i> <span data-i18n="sidebar_loginzone">Zona de Logeo</span></li>
+                            <li onclick="switchView('vacantes')" data-view="vacantes"><i class="fa-solid fa-door-open"></i> <span data-i18n="sidebar_vacantes">Vacantes</span></li>
+                        </ul>
+                    </li>
+
+                    <!-- Equipamiento & Items -->
+                    <li class="nav-group">
+                        <div class="nav-group-header" onclick="toggleNavGroup(this)">
+                            <div style="display:flex; align-items:center;">
+                                <i class="fa-solid fa-shield-halved"></i>
+                                <span data-i18n="menu_equipment">Equipamiento & Ítems</span>
+                            </div>
+                            <i class="fa-solid fa-chevron-down group-arrow"></i>
+                        </div>
+                        <ul class="nav-group-items">
+                            <li onclick="switchView('gear')" data-view="gear"><i class="fa-solid fa-vest"></i> <span data-i18n="sidebar_gear">Equipamiento</span></li>
+                            <li onclick="switchView('items')" data-view="items"><i class="fa-solid fa-toolbox"></i> <span data-i18n="sidebar_items">Important Items</span></li>
+                            <li onclick="switchView('expiring')" data-view="expiring"><i class="fa-solid fa-hourglass-half"></i> <span data-i18n="sidebar_expiring">Ítems por Expire</span></li>
+                        </ul>
+                    </li>
+
+                    <!-- Leveo & Actividades -->
+                    <li class="nav-group">
+                        <div class="nav-group-header" onclick="toggleNavGroup(this)">
+                            <div style="display:flex; align-items:center;">
+                                <i class="fa-solid fa-crosshairs"></i>
+                                <span data-i18n="menu_leveling_activities">Leveo & Eventos</span>
+                            </div>
+                            <i class="fa-solid fa-chevron-down group-arrow"></i>
+                        </div>
+                        <ul class="nav-group-items">
+                            <li onclick="switchView('levelzone')" data-view="levelzone"><i class="fa-solid fa-person-falling"></i> <span data-i18n="sidebar_levelzone">Leveling Zone</span></li>
+                            <li onclick="switchView('dailyevent')" data-view="dailyevent"><i class="fa-solid fa-calendar-day"></i> <span data-i18n="sidebar_dailyevent">Daily Events</span></li>
+                            <li onclick="switchView('routines')" data-view="routines"><i class="fa-solid fa-list-check"></i> <span data-i18n="sidebar_routines">Rutinas Diarias</span></li>
+                        </ul>
+                    </li>
+
+                    <!-- Herramientas & Extras -->
+                    <li class="nav-group">
+                        <div class="nav-group-header" onclick="toggleNavGroup(this)">
+                            <div style="display:flex; align-items:center;">
+                                <i class="fa-solid fa-sliders"></i>
+                                <span data-i18n="menu_tools">Herramientas & Extras</span>
+                            </div>
+                            <i class="fa-solid fa-chevron-down group-arrow"></i>
+                        </div>
+                        <ul class="nav-group-items">
+                            <li onclick="switchView('autotool')" data-view="autotool"><i class="fa-solid fa-robot"></i> <span data-i18n="sidebar_autotool">Auto Tool</span></li>
+                            <li onclick="switchView('contadores')" data-view="contadores"><i class="fa-solid fa-clock"></i> <span data-i18n="sidebar_contadores">Contadores</span></li>
+                            <li onclick="switchView('coupons')" data-view="coupons"><i class="fa-solid fa-ticket"></i> <span data-i18n="sidebar_coupons">Coupons</span></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
             <button class="sidebar-toggle compact-btn" onclick="toggleCompactMode()" title="Modo Compacto / Ventana Overlay" style="margin-top:auto; margin-bottom:10px; border-color:var(--primary); color:var(--primary);">
                 <i class="fa-solid fa-compress"></i> <span>Modo Compacto</span>
             </button>
@@ -413,17 +457,9 @@
             <!-- Gear & Fashion View -->
             <div id="gear-view" class="view-section">
                 <header style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                    <h2>Equipamiento & Fashion</h2>
+                    <h2>Equipamiento</h2>
                     <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-                        <select id="gear-char-filter" onchange="renderGearView()" style="padding: 0.5rem 1rem; border-radius: 8px; background: rgba(15,23,42,0.6); color: white; border: 1px solid var(--glass-border);">
-                            <option value="">Todos los Personajes</option>
-                        </select>
-                        <select id="gear-cat-filter" onchange="renderGearView()" style="padding: 0.5rem 1rem; border-radius: 8px; background: rgba(15,23,42,0.6); color: white; border: 1px solid var(--glass-border);">
-                            <option value="">Todas las Categorías</option>
-                            <option value="Combat">Combate</option>
-                            <option value="Fashion">Fashion / Cosméticos</option>
-                        </select>
-                        <input type="text" id="gear-search" placeholder="Buscar ítem o set..." oninput="renderGearView()" style="padding: 0.5rem 1rem; border-radius: 8px; background: rgba(0,0,0,0.3); color: white; border: 1px solid var(--glass-border);">
+                        <input type="text" id="gear-search" placeholder="Buscar por ítem, personaje, slot o nota..." oninput="renderGearView()" style="padding: 0.5rem 1rem; border-radius: 8px; background: rgba(0,0,0,0.3); color: white; border: 1px solid var(--glass-border); min-width: 250px;">
                         <button class="btn-primary" onclick="openGearModal()">
                             <i class="fa-solid fa-plus"></i> Nuevo Equipamiento
                         </button>
@@ -440,9 +476,7 @@
                 <header style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                     <h2>Rutinas Diarias y Semanales</h2>
                     <div style="display: flex; gap: 10px; align-items: center;">
-                        <select id="routines-char-filter" onchange="renderRoutinesView()" style="padding: 0.5rem 1rem; border-radius: 8px; background: rgba(15,23,42,0.6); color: white; border: 1px solid var(--glass-border);">
-                            <option value="">Todos los Personajes</option>
-                        </select>
+                        <input type="text" id="routines-search" placeholder="Buscar rutina o personaje..." oninput="renderRoutinesView()" style="padding: 0.5rem 1rem; border-radius: 8px; background: rgba(0,0,0,0.3); color: white; border: 1px solid var(--glass-border); min-width: 250px;">
                         <button class="btn-primary" onclick="openRoutineModal()">
                             <i class="fa-solid fa-plus"></i> Nueva Rutina
                         </button>
@@ -458,9 +492,12 @@
             <div id="expiring-view" class="view-section">
                 <header style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                     <h2>Ítems por Expire (VIP / Pets / Pases)</h2>
-                    <button class="btn-primary" onclick="openExpiringModal()">
-                        <i class="fa-solid fa-plus"></i> Registrar Ítem Temporal
-                    </button>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="text" id="expiring-search" placeholder="Buscar ítem o personaje..." oninput="renderExpiringView()" style="padding: 0.5rem 1rem; border-radius: 8px; background: rgba(0,0,0,0.3); color: white; border: 1px solid var(--glass-border); min-width: 250px;">
+                        <button class="btn-primary" onclick="openExpiringModal()">
+                            <i class="fa-solid fa-plus"></i> Registrar Ítem Temporal
+                        </button>
+                    </div>
                 </header>
 
                 <div class="card-grid" id="expiring-grid">
@@ -840,6 +877,7 @@
                 <div id="loginzone-chars-checklist" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--glass-border); border-radius: 8px; padding: 10px; background: rgba(0,0,0,0.2); display: flex; flex-direction: column; gap: 8px; margin-top: 5px;">
                     <!-- Checklist of characters populated dynamically -->
                 </div>
+            </div>
             <div class="modal-actions">
                 <button type="button" class="btn-secondary" onclick="closeLoginZoneModal()" data-i18n="modal_cancel">Cancelar</button>
                 <button type="button" class="btn-primary" onclick="submitLoginZone()" data-i18n="modal_save">Guardar</button>
@@ -864,16 +902,20 @@
             <input type="hidden" id="gear-id-input">
             <input type="hidden" id="gear-selected-slot" value="weapon">
 
-            <div class="flyff-inventory-modal-body" style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
-                
-                <!-- Left Column: Visual Flyff Inventory Window -->
-                <div class="flyff-inventory-container glass-panel" style="padding:15px; background:rgba(15,23,42,0.5); border-radius:12px; border:1px solid rgba(255,255,255,0.1);">
-                    <div style="text-align:center; font-weight:700; font-size:0.85rem; letter-spacing:1px; color:var(--primary); text-transform:uppercase; margin-bottom:10px;">
-                        <i class="fa-solid fa-box-archive"></i> Equipamiento Flyff
+            <div class="flyff-inventory-modal-body" style="display:flex; justify-content:center;">
+                <!-- Visual Flyff Inventory Window -->
+                <div class="flyff-inventory-container glass-panel" style="padding:20px; background:rgba(15,23,42,0.6); border-radius:16px; border:1px solid rgba(255,255,255,0.1); width:100%; max-width:550px;">
+                    <div style="text-align:center; font-weight:700; font-size:0.9rem; letter-spacing:1px; color:var(--primary); text-transform:uppercase; margin-bottom:15px;">
+                        <i class="fa-solid fa-box-archive"></i> Equipamiento Flyff (Selecciona un Slot para Configurar)
                     </div>
 
-                    <!-- Top Row: Jewelry (Ring1, Earring1, Necklace, Earring2, Ring2) -->
-                    <div class="flyff-grid-row-top" style="display:flex; justify-content:center; gap:6px; margin-bottom:12px;">
+                    <!-- Top Row: Accessories & Talismans (Talisman 1, Ring1, Earring1, Necklace, Earring2, Ring2, Talisman 2) -->
+                    <div class="flyff-grid-row-top" style="display:flex; justify-content:center; gap:6px; margin-bottom:15px; flex-wrap:wrap;">
+                        <button type="button" class="flyff-slot" data-slot="talisman1" onclick="selectFlyffSlot('talisman1')" title="Talismán 1">
+                            <span class="slot-icon">🔮</span>
+                            <span class="slot-label">Talismán 1</span>
+                            <span class="slot-item-name" id="slot-name-talisman1">Vacio</span>
+                        </button>
                         <button type="button" class="flyff-slot" data-slot="jewelry_ring1" onclick="selectFlyffSlot('jewelry_ring1')" title="Anillo 1">
                             <span class="slot-icon">💍</span>
                             <span class="slot-label">Anillo 1</span>
@@ -899,13 +941,18 @@
                             <span class="slot-label">Anillo 2</span>
                             <span class="slot-item-name" id="slot-name-jewelry_ring2">Vacio</span>
                         </button>
+                        <button type="button" class="flyff-slot" data-slot="talisman2" onclick="selectFlyffSlot('talisman2')" title="Talismán 2">
+                            <span class="slot-icon">🔮</span>
+                            <span class="slot-label">Talismán 2</span>
+                            <span class="slot-item-name" id="slot-name-talisman2">Vacio</span>
+                        </button>
                     </div>
 
                     <!-- Middle Section: Main Combat & Armor -->
-                    <div class="flyff-grid-middle" style="display:grid; grid-template-columns: 80px 1fr 80px; gap:10px; align-items:center; margin-bottom:12px;">
+                    <div class="flyff-grid-middle" style="display:grid; grid-template-columns: 100px 1fr 100px; gap:12px; align-items:center; margin-bottom:15px;">
                         
                         <!-- Left Column (3 slots: Weapon, Shield, Cloak) -->
-                        <div style="display:flex; flex-direction:column; gap:8px;">
+                        <div style="display:flex; flex-direction:column; gap:10px;">
                             <button type="button" class="flyff-slot" data-slot="weapon" onclick="selectFlyffSlot('weapon')" title="Arma Principal">
                                 <span class="slot-icon">⚔️</span>
                                 <span class="slot-label">Arma</span>
@@ -924,13 +971,13 @@
                         </div>
 
                         <!-- Center Avatar Silhouette -->
-                        <div class="flyff-avatar-placeholder" style="height:170px; background:radial-gradient(circle, rgba(99,102,241,0.15) 0%, rgba(0,0,0,0.4) 100%); border:1px solid rgba(255,255,255,0.08); border-radius:10px; display:flex; flex-direction:column; align-items:center; justify-content:center; opacity:0.85;">
-                            <i class="fa-solid fa-user-astronaut" style="font-size:3.5rem; color:var(--primary); margin-bottom:8px;"></i>
-                            <span id="flyff-avatar-char-name" style="font-weight:700; font-size:0.85rem; color:white;">Personaje</span>
+                        <div class="flyff-avatar-placeholder" style="height:190px; background:radial-gradient(circle, rgba(99,102,241,0.2) 0%, rgba(0,0,0,0.5) 100%); border:1px solid rgba(255,255,255,0.1); border-radius:12px; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                            <i class="fa-solid fa-user-astronaut" style="font-size:4rem; color:var(--primary); margin-bottom:8px;"></i>
+                            <span id="flyff-avatar-char-name" style="font-weight:700; font-size:0.9rem; color:white;">Personaje</span>
                         </div>
 
                         <!-- Right Column (4 slots: Suit Head, Suit Body, Suit Gloves, Suit Shoes) -->
-                        <div style="display:flex; flex-direction:column; gap:8px;">
+                        <div style="display:flex; flex-direction:column; gap:10px;">
                             <button type="button" class="flyff-slot" data-slot="suit_head" onclick="selectFlyffSlot('suit_head')" title="Casco / Cabeza">
                                 <span class="slot-icon">🪖</span>
                                 <span class="slot-label">Casco</span>
@@ -955,11 +1002,11 @@
                     </div>
 
                     <!-- Bottom Row: Fashion Set (Fashion Head, Suit, Gloves, Shoes) -->
-                    <div style="border-top:1px dashed rgba(255,255,255,0.1); padding-top:8px;">
-                        <div style="text-align:center; font-size:0.75rem; color:#ec4899; font-weight:700; text-transform:uppercase; margin-bottom:6px;">
-                            <i class="fa-solid fa-shirt"></i> Set Fashion
+                    <div style="border-top:1px dashed rgba(255,255,255,0.15); padding-top:10px;">
+                        <div style="text-align:center; font-size:0.8rem; color:#ec4899; font-weight:700; text-transform:uppercase; margin-bottom:8px;">
+                            <i class="fa-solid fa-shirt"></i> Set Fashion / Cosméticos
                         </div>
-                        <div class="flyff-grid-row-fashion" style="display:flex; justify-content:center; gap:6px;">
+                        <div class="flyff-grid-row-fashion" style="display:flex; justify-content:center; gap:8px;">
                             <button type="button" class="flyff-slot fashion" data-slot="fashion_head" onclick="selectFlyffSlot('fashion_head')" title="Gorro Fashion">
                                 <span class="slot-icon">🎩</span>
                                 <span class="slot-label">Fashion Head</span>
@@ -983,69 +1030,110 @@
                         </div>
                     </div>
                 </div>
+            </div>
+            <div style="display:flex; justify-content:flex-end; margin-top:15px;">
+                <button type="button" class="btn-secondary" onclick="closeGearModal()">Cerrar Inventario</button>
+            </div>
+        </div>
+    </div>
 
-                <!-- Right Column: Slot Inspector & Attribute Modifier Form -->
-                <div class="flyff-inspector-container glass-panel" style="padding:15px; background:rgba(15,23,42,0.7); border-radius:12px; display:flex; flex-direction:column; justify-content:space-between;">
-                    <div>
-                        <!-- Header for Selected Slot -->
-                        <div style="border-bottom:1px solid var(--glass-border); padding-bottom:8px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
-                            <h3 id="selected-slot-title" style="margin:0; color:var(--primary); font-size:1.1rem;">Arma Principal</h3>
-                            <span id="selected-slot-badge" style="background:var(--primary); color:#000; font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px; text-transform:uppercase;">Combat</span>
-                        </div>
+    <!-- Dedicated Slot Item Configuration Modal -->
+    <div id="slot-item-modal" class="modal">
+        <div class="modal-content glass-panel" style="max-width: 580px; width: 95%;">
+            <span class="close" onclick="closeSlotItemModal()">&times;</span>
+            <div style="border-bottom:1px solid var(--glass-border); padding-bottom:10px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center;">
+                <h2 id="slot-modal-title" style="margin:0; font-size:1.2rem; color:var(--primary);"><i class="fa-solid fa-box-archive"></i> Configurar Slot</h2>
+                <span id="slot-modal-badge" style="background:var(--primary); color:#000; font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:4px; text-transform:uppercase;">Combat</span>
+            </div>
 
-                        <!-- Item Select from Catalog -->
-                        <div class="form-group" style="margin-bottom:12px;">
-                            <label style="font-size:0.85rem; color:rgba(255,255,255,0.8); margin-bottom:4px; display:block;">Ítem del Juego (Catálogo Oficial)</label>
-                            <select id="gear-name-select" style="width:100%; padding:0.6rem; background:rgba(0,0,0,0.4); border:1px solid var(--glass-border); border-radius:8px; color:white; font-weight:600;">
-                                <!-- Items populated dynamically -->
-                            </select>
-                        </div>
+            <input type="hidden" id="gear-id-input">
+            <input type="hidden" id="gear-selected-slot" value="weapon">
 
-                        <!-- Attributes Panel -->
-                        <div id="gear-attributes-panel" style="display:flex; flex-direction:column; gap:10px;">
-                            <div style="display:flex; gap:10px;">
-                                <div class="form-group" style="flex:1;">
-                                    <label style="font-size:0.8rem; opacity:0.8;">Refinado / Upgrade</label>
-                                    <select id="gear-refine-select" style="width:100%; padding:0.5rem; background:rgba(0,0,0,0.4); border:1px solid var(--glass-border); border-radius:6px; color:white;">
-                                        <!-- Refines +0 to +20 -->
-                                    </select>
-                                </div>
-                                <div class="form-group" style="flex:1;">
-                                    <label style="font-size:0.8rem; opacity:0.8;">Elemento</label>
-                                    <select id="gear-element-select" style="width:100%; padding:0.5rem; background:rgba(0,0,0,0.4); border:1px solid var(--glass-border); border-radius:6px; color:white;">
-                                        <!-- Elements -->
-                                    </select>
-                                </div>
-                            </div>
+            <!-- Checkbox to filter by character class -->
+            <div style="background:rgba(212,175,55,0.08); border:1px solid rgba(212,175,55,0.2); border-radius:8px; padding:10px 12px; margin-bottom:15px;">
+                <label style="display:flex; align-items:center; gap:10px; cursor:pointer; color:var(--primary); font-weight:600; font-size:0.85rem; margin:0;">
+                    <input type="checkbox" id="gear-class-filter-check" checked onchange="filterGearCatalogByClass()" style="width:18px; height:18px; accent-color:var(--primary); cursor:pointer;">
+                    <i class="fa-solid fa-filter"></i> Mostrar solo ítems permitidos para clase: <span id="gear-class-label" style="color:white; text-decoration:underline; font-weight:bold;">Clase</span>
+                </label>
+            </div>
 
-                            <div class="form-group">
-                                <label style="font-size:0.8rem; opacity:0.8;">Perforaciones (Piercings)</label>
-                                <select id="gear-card-select" style="width:100%; padding:0.5rem; background:rgba(0,0,0,0.4); border:1px solid var(--glass-border); border-radius:6px; color:white;">
-                                    <!-- Piercings 0/4 to 4/4 -->
-                                </select>
-                            </div>
+            <div style="display:flex; flex-direction:column; gap:12px;">
+                <!-- Target Character -->
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="font-size:0.85rem; color:var(--primary); font-weight:600; margin-bottom:4px; display:block;">
+                        <i class="fa-solid fa-arrow-right-arrow-left"></i> Asignar / Mover a Personaje
+                    </label>
+                    <select id="gear-target-char-select" style="width:100%; padding:0.6rem; background:rgba(0,0,0,0.5); border:1px solid var(--primary); border-radius:8px; color:white; font-weight:600;">
+                        <!-- Characters populated dynamically -->
+                    </select>
+                </div>
 
-                            <div class="form-group">
-                                <label style="font-size:0.8rem; opacity:0.8;">Nota / Observación</label>
-                                <input type="text" id="gear-note-input" placeholder="ej. Prestado a Juan" style="width:100%; padding:0.5rem; background:rgba(0,0,0,0.4); border:1px solid var(--glass-border); border-radius:6px; color:white;">
-                            </div>
-                        </div>
+                <!-- Item Select from Official Catalog (Searchable) -->
+                <div class="form-group" style="margin-bottom:0; position:relative;">
+                    <label style="font-size:0.85rem; color:rgba(255,255,255,0.85); margin-bottom:4px; display:block;">Ítem del Juego (Catálogo Oficial)</label>
+                    <input type="text" id="gear-name-search" placeholder="🔍 Buscar ítem por nombre..." autocomplete="off"
+                        style="width:100%; padding:0.6rem; background:rgba(0,0,0,0.4); border:1px solid var(--glass-border); border-radius:8px; color:white; font-weight:600;"
+                        oninput="filterGearNameDropdown(this.value)" onfocus="showGearNameDropdown()">
+                    <div id="gear-name-dropdown" style="display:none; position:absolute; z-index:999; width:100%; max-height:200px; overflow-y:auto; background:rgba(15,23,42,0.97); border:1px solid var(--primary); border-radius:0 0 8px 8px; margin-top:-2px;">
+                        <!-- Options populated dynamically -->
                     </div>
+                    <input type="hidden" id="gear-name-select" value="">
+                </div>
 
-                    <!-- Modal Actions -->
-                    <div style="display:flex; justify-content:space-between; gap:10px; margin-top:15px; border-top:1px solid var(--glass-border); padding-top:12px;">
-                        <button type="button" class="btn-secondary" style="color:var(--danger); border-color:rgba(239,68,68,0.3);" onclick="unequipCurrentSlot()">
-                            <i class="fa-solid fa-trash-can"></i> Desequipar
-                        </button>
-                        <div style="display:flex; gap:8px;">
-                            <button type="button" class="btn-secondary" onclick="closeGearModal()">Cerrar</button>
-                            <button type="button" class="btn-primary" onclick="submitGearForm()">
-                                <i class="fa-solid fa-floppy-disk"></i> Guardar Slot
-                            </button>
-                        </div>
+                <!-- General Item Upgrade / Refinement Level -->
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="font-size:0.8rem; opacity:0.85;">Refinado del Ítem (Upgrade)</label>
+                    <select id="gear-refine-select" style="width:100%; padding:0.55rem; background:rgba(0,0,0,0.4); border:1px solid var(--glass-border); border-radius:6px; color:white;">
+                        <!-- Refine +0 to +20 -->
+                    </select>
+                </div>
+
+                <!-- Element Type & Element Upgrade Level Separated -->
+                <div style="display:flex; gap:10px;">
+                    <div class="form-group" style="flex:1; margin-bottom:0;">
+                        <label style="font-size:0.8rem; opacity:0.85;">Elemento</label>
+                        <select id="gear-element-type-select" onchange="onGearElementTypeChange()" style="width:100%; padding:0.55rem; background:rgba(0,0,0,0.4); border:1px solid var(--glass-border); border-radius:6px; color:white;">
+                            <option value="Ninguno">Ninguno</option>
+                            <option value="Fuego">Fuego (Fire)</option>
+                            <option value="Agua">Agua (Water)</option>
+                            <option value="Electricidad">Electricidad (Electric)</option>
+                            <option value="Tierra">Tierra (Earth)</option>
+                            <option value="Viento">Viento (Wind)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex:1; margin-bottom:0;">
+                        <label style="font-size:0.8rem; opacity:0.85;">Upgrade de Elemento</label>
+                        <select id="gear-element-refine-select" style="width:100%; padding:0.55rem; background:rgba(0,0,0,0.4); border:1px solid var(--glass-border); border-radius:6px; color:white;">
+                            <!-- Element Refine +0 to +20 -->
+                        </select>
                     </div>
                 </div>
 
+                <!-- Piercing Cards -->
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="font-size:0.8rem; opacity:0.85;">Perforaciones (Piercings)</label>
+                    <select id="gear-card-select" style="width:100%; padding:0.55rem; background:rgba(0,0,0,0.4); border:1px solid var(--glass-border); border-radius:6px; color:white;">
+                        <!-- Piercings -->
+                    </select>
+                </div>
+
+                <!-- Note / Observation -->
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="font-size:0.8rem; opacity:0.85;">Nota / Observación</label>
+                    <input type="text" id="gear-note-input" placeholder="ej. Prestado a Juan, Set principal" style="width:100%; padding:0.55rem; background:rgba(0,0,0,0.4); border:1px solid var(--glass-border); border-radius:6px; color:white;">
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; border-top:1px solid var(--glass-border); padding-top:15px;">
+                <button type="button" class="btn-secondary" onclick="unequipCurrentSlot()" style="background:rgba(239,68,68,0.15); border-color:rgba(239,68,68,0.5); color:#ef4444; font-size:0.85rem;">
+                    <i class="fa-solid fa-circle-minus"></i> Desequipar Slot
+                </button>
+                <div style="display:flex; gap:10px;">
+                    <button type="button" class="btn-secondary" onclick="closeSlotItemModal()">Cancelar</button>
+                    <button type="button" class="btn-primary" onclick="submitGearForm()">
+                        <i class="fa-solid fa-save"></i> Guardar Equipamiento
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -1084,11 +1172,15 @@
             <h2 id="expiring-modal-title">Registrar Ítem Temporal</h2>
             <input type="hidden" id="expiring-id-input">
             
-            <div class="form-group">
+            <div class="form-group" style="position:relative;">
                 <label>Personaje Asignado</label>
-                <select id="expiring-char-select" style="width:100%; padding:0.6rem; background:rgba(15,23,42,0.6); border:1px solid var(--glass-border); border-radius:8px; color:white;">
-                    <!-- Characters -->
-                </select>
+                <input type="text" id="expiring-char-search" placeholder="🔍 Buscar personaje por nombre..." autocomplete="off"
+                    style="width:100%; padding:0.6rem; background:rgba(15,23,42,0.6); border:1px solid var(--glass-border); border-radius:8px; color:white; font-weight:600;"
+                    oninput="filterExpiringCharDropdown(this.value)" onfocus="showExpiringCharDropdown()">
+                <div id="expiring-char-dropdown" style="display:none; position:absolute; z-index:999; width:100%; max-height:200px; overflow-y:auto; background:rgba(15,23,42,0.97); border:1px solid var(--primary); border-radius:0 0 8px 8px; margin-top:-2px;">
+                    <!-- Filtered character options -->
+                </div>
+                <input type="hidden" id="expiring-char-select" value="">
             </div>
 
             <div class="form-group" style="margin-top:10px;">
