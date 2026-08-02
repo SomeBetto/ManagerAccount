@@ -9,5 +9,8 @@ from .autotool import bp as autotool_bp
 from .gear import bp as gear_bp
 from .routines import bp as routines_bp
 from .expiring import bp as expiring_bp
+from .buffpang import bp as buffpang_bp
+from .otp import bp as otp_bp
+
 
 

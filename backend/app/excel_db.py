@@ -5,7 +5,7 @@ import json
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.json')
 
 SCHEMA = {
-    'accounts': ['id', 'email', 'password', 'pin', 'otp_token'],
+    'accounts': ['id', 'email', 'password', 'pin', 'otp_token', 'totp_secret'],
     'characters': ['id', 'account_id', 'name', 'password', 'level', 'class_name', 'char_type', 'is_favorite'],
     'items': ['id', 'character_id', 'name', 'item_type', 'description'],
     'level_entries': ['id', 'character_id', 'priority', 'note'],
@@ -27,6 +27,7 @@ HEADER_ALIASES = {
     'password': ['password', 'contraseña', 'contrasena', 'contrasea', 'pass', 'clave', 'pw'],
     'pin': ['pin', 'segunda clave', 'bank pin', 'pin2'],
     'otp_token': ['otp_token', 'otp', 'token_otp', 'otp token', 'token otp', 'second_factor', 'otp_code'],
+    'totp_secret': ['totp_secret', 'totp', 'secret_otp', 'otp_secret', 'clave_totp', 'totp_key'],
     'account_id': ['account_id', 'id_cuenta', 'cuenta_id', 'acc_id', 'account'],
     'name': ['name', 'nombre', 'personaje', 'char_name', 'char name', 'character', 'pjs', 'pj'],
     'level': ['level', 'nivel', 'lvl', 'lv'],
@@ -99,8 +100,11 @@ TABLE_SHEET_ALIASES = {
     'characters': ['characters', 'personajes', 'pjs']
 }
 
+import threading
+
 class ExcelDB:
     _cache = {}
+    _file_lock = threading.Lock()
 
     @classmethod
     def clear_cache(cls):
@@ -111,12 +115,30 @@ class ExcelDB:
         path = get_excel_path()
         if not path or not os.path.exists(path):
             raise Exception("Ruta de archivo Excel no configurada o el archivo no existe.")
-        # data_only=True is CRITICAL to read evaluated VLOOKUPs instead of strings
-        return openpyxl.load_workbook(path, data_only=True), path
+        try:
+            return openpyxl.load_workbook(path, data_only=True), path
+        except Exception as e:
+            error_msg = str(e)
+            if 'Bad CRC-32' in error_msg or 'BadZipFile' in error_msg or 'is not a valid zip file' in error_msg or 'Zip' in error_msg:
+                print(f"[ExcelDB Auto-Recovery] Se detectó conflicto de sincronización/corrupción en Excel ({e}). Restaurando desde backup...")
+                backups = ExcelDB.list_backups()
+                for b in backups:
+                    try:
+                        b_path = os.path.join(ExcelDB.get_backups_dir(), b['filename'])
+                        test_wb = openpyxl.load_workbook(b_path, data_only=True)
+                        test_wb.close()
+                        import shutil
+                        shutil.copy2(b_path, path)
+                        print(f"[ExcelDB Auto-Recovery] Backup restaurado con éxito: {b['filename']}")
+                        return openpyxl.load_workbook(path, data_only=True), path
+                    except Exception:
+                        continue
+            raise e
 
     @staticmethod
     def _save_workbook(wb, path):
-        wb.save(path)
+        with ExcelDB._file_lock:
+            wb.save(path)
 
     @staticmethod
     def _get_actual_sheetname(wb, target_name):

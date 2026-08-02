@@ -78,6 +78,9 @@ const translations = {
         field_pin: "PIN",
         field_pass: "Pass",
         field_otp: "OTP Token",
+        field_otp_backup: "Backup OTP Code",
+        field_totp_secret: "Dynamic OTP Secret (TOTP)",
+        sidebar_otp: "OTP Generator",
         field_class: "Class",
         field_level: "Level",
         field_owner: "Owner",
@@ -205,7 +208,10 @@ const translations = {
         field_id: "ID",
         field_pin: "PIN",
         field_pass: "Contraseña",
-        field_otp: "OTP Token",
+        field_otp: "Token OTP",
+        field_otp_backup: "OTP de Respaldo",
+        field_totp_secret: "Secreto OTP Dinámico (TOTP)",
+        sidebar_otp: "Generador OTP",
         field_class: "Clase",
         field_level: "Nivel",
         field_owner: "Dueño",
@@ -468,23 +474,45 @@ function switchView(view) {
         if (expiringView) expiringView.classList.add('active');
         pageTitle.innerHTML = i18n('sidebar_expiring') || 'Ítems por Expire';
         fetchExpiringData();
+    } else if (view === 'buffpang') {
+        const buffpangView = document.getElementById('buffpang-view');
+        if (buffpangView) buffpangView.classList.add('active');
+        pageTitle.innerHTML = 'BuffPang Automation';
+        loadBuffpangClients();
+        fetchBuffpangTasks();
+    } else if (view === 'otp') {
+        const otpView = document.getElementById('otp-view');
+        if (otpView) otpView.classList.add('active');
+        pageTitle.innerHTML = i18n('sidebar_otp') || 'Generador OTP';
+        fetchAccounts().then(() => renderOtpView());
     }
     updateHeaderButtons(view);
 }
 
+
 function updateHeaderButtons(view) {
-    const accUpload = document.getElementById('btn-upload-accounts');
-    const charUpload = document.getElementById('btn-upload-characters');
+    const accUploadIcon = document.getElementById('btn-upload-accounts-icon');
+    const charUploadIcon = document.getElementById('btn-upload-characters-icon');
+    const addAccBtn = document.getElementById('btn-add-account');
+    const addCharBtn = document.getElementById('btn-add-character');
     const launchBtn = document.getElementById('btn-launch-selected');
+    const deleteBtn = document.getElementById('btn-delete-selected');
+
+    if (accUploadIcon) accUploadIcon.style.display = 'none';
+    if (charUploadIcon) charUploadIcon.style.display = 'none';
+    if (addAccBtn) addAccBtn.style.display = 'none';
+    if (addCharBtn) addCharBtn.style.display = 'none';
+    if (launchBtn) launchBtn.style.display = 'none';
+    if (deleteBtn) deleteBtn.style.display = 'none';
 
     if (view === 'accounts') {
-        if (accUpload) accUpload.style.display = 'inline-flex';
-        if (charUpload) charUpload.style.display = 'none';
+        if (accUploadIcon) accUploadIcon.style.display = 'inline-flex';
+        if (addAccBtn) addAccBtn.style.display = 'inline-flex';
         if (launchBtn) launchBtn.style.display = selectedAccountIds.size > 0 ? 'inline-flex' : 'none';
-    } else {
-        if (accUpload) accUpload.style.display = 'none';
-        if (charUpload) charUpload.style.display = 'inline-flex';
-        if (launchBtn) launchBtn.style.display = 'none';
+        if (deleteBtn) deleteBtn.style.display = selectedAccountIds.size > 0 ? 'inline-flex' : 'none';
+    } else if (view === 'characters') {
+        if (charUploadIcon) charUploadIcon.style.display = 'inline-flex';
+        if (addCharBtn) addCharBtn.style.display = 'inline-flex';
     }
 }
 
@@ -494,15 +522,42 @@ async function fetchAccounts() {
         const res = await fetch(`${API_URL}/accounts`);
         if (res.ok) {
             accounts = await res.json();
+            await autoMigrateOtpSecrets();
             renderAccounts();
             updateFilterOptions();
             if (currentView === 'vacantes') renderVacantes();
             if (currentView === 'dashboard') renderDashboard();
+            if (currentView === 'otp') renderOtpView();
         } else {
             console.warn("Error fetching accounts:", await res.json());
             accounts = [];
         }
     } catch (e) { console.error(e); accounts = []; }
+}
+
+async function autoMigrateOtpSecrets() {
+    const pendingUpdates = [];
+    for (const acc of accounts) {
+        if (!acc.totp_secret && acc.otp_token) {
+            const cleanToken = acc.otp_token.trim().toUpperCase().replace(/\s+/g, '');
+            if (/^[A-Z2-7]{8,128}=*$/.test(cleanToken)) {
+                acc.totp_secret = cleanToken;
+                pendingUpdates.push({ id: acc.id, totp_secret: cleanToken });
+            }
+        }
+    }
+
+    if (pendingUpdates.length > 0) {
+        try {
+            await fetch(`${API_URL}/accounts/batch-totp`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ updates: pendingUpdates })
+            });
+        } catch (e) {
+            console.error('Error migrando batch de secrets TOTP:', e);
+        }
+    }
 }
 
 function syncCharacterTypesWithDatabase() {
@@ -647,7 +702,10 @@ function renderAccounts() {
                     <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountPassword(${acc.id})" title="${i18n('action_copy_pass')}"><i class="fa-solid fa-key"></i> Pass</button>
                     <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountPin(${acc.id})" title="${i18n('action_copy_pin')}"><i class="fa-solid fa-lock"></i> PIN</button>
                     ${acc.otp_token ? `
-                    <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountOtp(${acc.id})" title="${i18n('action_copy_otp')}"><i class="fa-solid fa-shield-halved"></i> OTP</button>
+                    <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem; color:#eab308; border-color:rgba(234,179,8,0.4);" onclick="copyAccountOtp(${acc.id})" title="Copiar OTP Respaldo"><i class="fa-solid fa-shield-halved"></i> OTP Respaldo</button>
+                    ` : ''}
+                    ${acc.totp_secret ? `
+                    <button class="btn-primary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountTotp(${acc.id})" title="Copiar Código TOTP 6 Dígitos"><i class="fa-solid fa-key"></i> TOTP</button>
                     ` : ''}
                     <button class="btn-autologin" onclick="triggerAutoLogin(${acc.id})" title="Auto-Login (UAC)"><i class="fa-solid fa-keyboard"></i> Auto-Login</button>
                 </div>
@@ -953,6 +1011,7 @@ function renderCharactersHTML(list, targetGridId = 'characters-grid') {
             try {
                 const charType = char.char_type || 'Unknown';
                 const charTypeLower = charType.toLowerCase ? charType.toLowerCase() : 'unknown';
+                const acc = accounts.find(a => a.id == char.account_id);
 
                 return `
                 <div class="card">
@@ -969,7 +1028,7 @@ function renderCharactersHTML(list, targetGridId = 'characters-grid') {
                         </div>
                     </div>
                     <div class="card-header" style="padding-top:0; margin-bottom:0.5rem;">
-                        <div class="card-title clickable" style="word-break:break-all;" onclick="openAccountDetailsModal(${char.account_id})">${char.name || 'Unnamed'}</div>
+                        <div class="card-title clickable" style="word-break:break-all;" onclick="openModal('account', ${char.account_id})">${char.name || 'Unnamed'}</div>
                     </div>
                     <div class="card-content">
                         <p>${i18n('field_level')} <span class="value" style="font-weight:700; color:var(--primary);"><i class="fa-solid fa-angles-up"></i> Lvl ${char.level || 0}</span></p>
@@ -979,10 +1038,13 @@ function renderCharactersHTML(list, targetGridId = 'characters-grid') {
                             <i class="fa-solid fa-map-location-dot"></i> <span>${getRecommendedZone(char.level)}</span>
                         </div>
 
-                        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:15px;">
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:15px;">
                             <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyToClipboard('${getAccountEmail(char.account_id)}')" title="${i18n('action_copy_email')}"><i class="fa-solid fa-envelope"></i> Email</button>
                             <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyCharacterPassword(${char.id})" title="${i18n('action_copy_pass')}"><i class="fa-solid fa-key"></i> Pass</button>
                             <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountPin(${char.account_id})" title="${i18n('action_copy_pin')}"><i class="fa-solid fa-lock"></i> PIN</button>
+                            ${acc && acc.totp_secret ? `
+                            <button class="btn-primary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="copyAccountTotp(${char.account_id})" title="Copiar Código TOTP 6 Dígitos"><i class="fa-solid fa-key"></i> TOTP</button>
+                            ` : ''}
                             <button class="btn-autologin" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="triggerAutoLogin(${char.account_id})" title="Auto-Login (UAC)"><i class="fa-solid fa-keyboard"></i> Auto-Login</button>
                         </div>
                     </div>
@@ -1105,8 +1167,12 @@ async function openModal(type = null, id = null) {
                 <input type="text" name="pin" value="${data.pin || ''}">
             </div>
             <div class="form-group">
-                <label>${i18n('field_otp')}</label>
-                <input type="text" name="otp_token" value="${data.otp_token || ''}">
+                <label>${i18n('field_otp_backup')} <span style="font-size:0.75rem; opacity:0.6;">(Código de desvinculación)</span></label>
+                <input type="text" name="otp_token" value="${data.otp_token || ''}" placeholder="ej. 123456">
+            </div>
+            <div class="form-group">
+                <label>${i18n('field_totp_secret')} <span style="font-size:0.75rem; opacity:0.6;">(Clave Base32 / QR)</span></label>
+                <input type="text" name="totp_secret" value="${data.totp_secret || ''}" placeholder="ej. JBSWY3DPEHPK3PXP">
             </div>
         `;
     } else if (type === 'character') {
@@ -1312,6 +1378,14 @@ function copyAccountPin(id) {
 function copyAccountOtp(id) {
     const acc = accounts.find(a => a.id === id);
     if (acc) copyToClipboard(acc.otp_token);
+}
+
+async function copyAccountTotp(id) {
+    const acc = accounts.find(a => a.id == id);
+    if (acc && acc.totp_secret) {
+        const code = await generateTOTP(acc.totp_secret);
+        copyToClipboard(code);
+    }
 }
 
 function copyCharacterPassword(id) {
@@ -4546,5 +4620,958 @@ document.addEventListener('keydown', (e) => {
         if (typeof hideExpiringCharDropdown === 'function') hideExpiringCharDropdown();
     }
 });
+
+function escapeHtml(str) {
+
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+// --- BuffPang Automation Functions ---
+
+let buffpangSequenceKeys = [];
+
+async function loadBuffpangClients() {
+    const select = document.getElementById('buffpang-client-select');
+    if (!select) return;
+    select.innerHTML = '<option value="">Cargando clientes de Flyff...</option>';
+    
+    try {
+        const res = await fetch(`${API_URL}/buffpang/clients`);
+        const data = await res.json();
+        
+        if (data.status === 'success' && data.clients.length > 0) {
+            let optionsHtml = '<option value="">-- Selecciona un cliente de Flyff --</option>';
+            data.clients.forEach(c => {
+                optionsHtml += `<option value="${c.pid}" data-hwnd="${c.hwnd}">[PID ${c.pid}] ${escapeHtml(c.title)}</option>`;
+            });
+            select.innerHTML = optionsHtml;
+        } else {
+            select.innerHTML = '<option value="">No se encontraron procesos de Flyff abiertos</option>';
+        }
+    } catch (e) {
+        console.error('Error al cargar clientes de Flyff:', e);
+        select.innerHTML = '<option value="">Error al buscar clientes de Flyff</option>';
+    }
+}
+
+async function showFlyffClient() {
+    const select = document.getElementById('buffpang-client-select');
+    if (!select || !select.value) {
+        alert('Por favor selecciona un cliente de Flyff primero.');
+        return;
+    }
+    const selectedOption = select.options[select.selectedIndex];
+    const pid = parseInt(select.value);
+    const hwnd = parseInt(selectedOption.getAttribute('data-hwnd'));
+
+    try {
+        const res = await fetch(`${API_URL}/buffpang/show`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pid, hwnd })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            console.log(data.message);
+        } else {
+            alert(data.message || 'No se pudo traer la ventana al frente.');
+        }
+    } catch (e) {
+        console.error('Error al ejecutar ShowFlyff:', e);
+        alert('Error de conexión al ejecutar ShowFlyff.');
+    }
+}
+
+function toggleBuffpangMode(mode) {
+    const singleSection = document.getElementById('buffpang-single-section');
+    const sequenceSection = document.getElementById('buffpang-sequence-section');
+    const holdSection = document.getElementById('buffpang-hold-section');
+
+    if (singleSection) singleSection.style.display = (mode === 'single') ? 'block' : 'none';
+    if (sequenceSection) sequenceSection.style.display = (mode === 'sequence') ? 'block' : 'none';
+    if (holdSection) holdSection.style.display = (mode === 'hold') ? 'block' : 'none';
+}
+
+function addKeyToBuffpangSequence() {
+    const keySelect = document.getElementById('buffpang-seq-key-select');
+    const delayInput = document.getElementById('buffpang-seq-delay-input');
+    if (!keySelect || !delayInput) return;
+
+    const key = keySelect.value;
+    const keyLabel = keySelect.options[keySelect.selectedIndex].text;
+    const delay = parseFloat(delayInput.value) || 0.5;
+
+    buffpangSequenceKeys.push({ key, label: keyLabel, delay });
+    renderBuffpangSequenceList();
+}
+
+function removeKeyFromBuffpangSequence(index) {
+    buffpangSequenceKeys.splice(index, 1);
+    renderBuffpangSequenceList();
+}
+
+function renderBuffpangSequenceList() {
+    const container = document.getElementById('buffpang-sequence-list');
+    if (!container) return;
+
+    if (buffpangSequenceKeys.length === 0) {
+        container.innerHTML = '<small style="opacity:0.5;">No hay teclas agregadas a la secuencia aún.</small>';
+        return;
+    }
+
+    let html = '';
+    buffpangSequenceKeys.forEach((item, index) => {
+        html += `
+            <span style="display:inline-flex; align-items:center; gap:5px; background:rgba(59,130,246,0.2); border:1px solid rgba(59,130,246,0.4); padding:3px 8px; border-radius:6px; font-size:0.8rem; color:white;">
+                <strong style="color:var(--primary);">${escapeHtml(item.label)}</strong> 
+                <span style="opacity:0.7;">(${item.delay}s)</span>
+                <i class="fa-solid fa-times" onclick="removeKeyFromBuffpangSequence(${index})" style="cursor:pointer; color:#ef4444; margin-left:4px;"></i>
+            </span>
+        `;
+    });
+    container.innerHTML = html;
+}
+
+async function createBuffpangTask() {
+    const clientSelect = document.getElementById('buffpang-client-select');
+    if (!clientSelect || !clientSelect.value) {
+        alert('Por favor selecciona un cliente de Flyff de la lista.');
+        return;
+    }
+
+    const selectedOption = clientSelect.options[clientSelect.selectedIndex];
+    const pid = parseInt(clientSelect.value);
+    const hwnd = parseInt(selectedOption.getAttribute('data-hwnd'));
+    const mode = document.querySelector('input[name="buffpang-mode"]:checked').value;
+    const methodSelect = document.getElementById('buffpang-method-select');
+    const method = methodSelect ? methodSelect.value : 'background';
+
+    const interval = parseFloat(document.getElementById('buffpang-interval-input').value) || 2.0;
+    const jobNameInputEl = document.getElementById('buffpang-job-name-input');
+    const jobNameInput = jobNameInputEl ? jobNameInputEl.value.trim() : '';
+    const name = jobNameInput || `Trabajo PID ${pid}`;
+
+    let keys = [];
+    let hold_duration = 0;
+
+    if (mode === 'single') {
+        const keySelect = document.getElementById('buffpang-key-select');
+        const key = keySelect.value;
+        keys = [{ key, delay: 0.05 }];
+    } else if (mode === 'hold') {
+        const keySelect = document.getElementById('buffpang-hold-key-select');
+        const holdInput = document.getElementById('buffpang-hold-duration-input');
+        const key = keySelect.value;
+        hold_duration = parseFloat(holdInput.value) || 0;
+        keys = [{ key, delay: 0.05 }];
+    } else {
+        if (buffpangSequenceKeys.length === 0) {
+            alert('Agrega al menos una tecla a la secuencia antes de iniciar.');
+            return;
+        }
+        keys = buffpangSequenceKeys.map(k => ({ key: k.key, delay: k.delay }));
+    }
+
+    try {
+        const res = await fetch(`${API_URL}/buffpang/tasks/start`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                pid, hwnd, name, mode, method, interval, hold_duration, keys
+            })
+        });
+        const data = await res.json();
+
+        if (data.status === 'success') {
+            // Reset form input and sequence builder so subsequent tasks can be added cleanly
+            if (jobNameInputEl) jobNameInputEl.value = '';
+            buffpangSequenceKeys = [];
+            renderBuffpangSequenceList();
+
+            fetchBuffpangTasks();
+            alert(`Trabajo "${name}" iniciado con éxito para PID ${pid}.`);
+        } else {
+            alert(data.message || 'No se pudo iniciar la tarea.');
+        }
+    } catch (e) {
+        console.error('Error al iniciar tarea de BuffPang:', e);
+        alert('Error al conectar con el servidor.');
+    }
+}
+
+async function fetchBuffpangTasks() {
+    const tbody = document.getElementById('buffpang-tasks-tbody');
+    if (!tbody) return;
+
+    try {
+        const res = await fetch(`${API_URL}/buffpang/tasks`);
+        const data = await res.json();
+
+        if (data.status === 'success' && data.tasks.length > 0) {
+            let html = '';
+            data.tasks.forEach(t => {
+                const keysDisplay = t.keys.map(k => (k.key || '').toUpperCase()).join(', ');
+                const statusBadge = t.running 
+                    ? '<span class="status-badge" style="background:rgba(34,197,94,0.2); color:#4ade80; border:1px solid rgba(34,197,94,0.4);"><i class="fa-solid fa-play"></i> Activo</span>'
+                    : '<span class="status-badge" style="background:rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.4);"><i class="fa-solid fa-pause"></i> Pausado</span>';
+
+                let modeLabel = 'Tecla Única';
+                if (t.mode === 'sequence') modeLabel = 'Secuencia';
+                if (t.mode === 'hold') modeLabel = t.hold_duration > 0 ? `Hold (${t.hold_duration}s)` : 'Hold Continuo';
+
+                let methodTag = '⚡ Foco';
+                if (t.method === 'background') methodTag = '🛡️ 2do Plano';
+                if (t.method === 'child') methodTag = '🌐 Subventanas';
+
+                html += `
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.05); font-size:0.9rem;">
+                        <td style="padding:10px; font-weight:600; color:white;">#${t.id} - ${escapeHtml(t.name)}</td>
+                        <td style="padding:10px; color:var(--primary);">PID ${t.pid}</td>
+                        <td style="padding:10px; opacity:0.8;">${modeLabel} <small style="opacity:0.6;">(${methodTag})</small></td>
+                        <td style="padding:10px; font-family:monospace; color:#60a5fa;">[ ${escapeHtml(keysDisplay)} ]</td>
+                        <td style="padding:10px; opacity:0.8;">${t.interval}s</td>
+                        <td style="padding:10px;">${statusBadge}</td>
+                        <td style="padding:10px; text-align:right;">
+                            <button class="btn-secondary" onclick="toggleBuffpangTask(${t.id})" style="padding:0.25rem 0.6rem; font-size:0.8rem; margin-right:4px;" title="Pausar / Reanudar">
+                                ${t.running ? '<i class="fa-solid fa-pause"></i> Pausar' : '<i class="fa-solid fa-play"></i> Reanudar'}
+                            </button>
+                            <button class="btn-secondary" onclick="deleteBuffpangTask(${t.id})" style="padding:0.25rem 0.6rem; font-size:0.8rem; color:#ef4444; border-color:rgba(239,68,68,0.4);" title="Eliminar Trabajo">
+                                <i class="fa-solid fa-trash"></i> Eliminar
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        } else {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="padding:20px; text-align:center; color:rgba(255,255,255,0.5);">
+                        No hay trabajos de BuffPang activos.
+                    </td>
+                </tr>
+            `;
+        }
+    } catch (e) {
+        console.error('Error al obtener lista de tareas BuffPang:', e);
+    }
+}
+
+async function toggleBuffpangTask(taskId) {
+    try {
+        const res = await fetch(`${API_URL}/buffpang/tasks/toggle`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ task_id: taskId })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            fetchBuffpangTasks();
+        }
+    } catch (e) {
+        console.error('Error alternando tarea BuffPang:', e);
+    }
+}
+
+async function deleteBuffpangTask(taskId) {
+    try {
+        const res = await fetch(`${API_URL}/buffpang/tasks/delete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ task_id: taskId })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            fetchBuffpangTasks();
+        }
+    } catch (e) {
+        console.error('Error eliminando tarea BuffPang:', e);
+    }
+}
+
+async function stopAllBuffpangTasks() {
+    try {
+        const res = await fetch(`${API_URL}/buffpang/tasks/stop`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            fetchBuffpangTasks();
+        }
+    } catch (e) {
+        console.error('Error deteniendo todas las tareas BuffPang:', e);
+    }
+}
+
+/* ==========================================================================
+   OTP GENERATOR & MANAGEMENT MODULE (TOTP RFC 6238 + QR SCREEN & FILE SCAN)
+   ========================================================================== */
+
+let otpTimerInterval = null;
+let screenStream = null;
+let screenScanTimer = null;
+let importedOtpBuffer = [];
+
+// Base32 Decoder
+function base32Decode(base32Str) {
+    if (!base32Str) return new Uint8Array(0);
+    const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+    const cleanStr = base32Str.toUpperCase().replace(/[^A-Z2-7]/g, '');
+    let bits = 0;
+    let value = 0;
+    const bytes = [];
+
+    for (let i = 0; i < cleanStr.length; i++) {
+        const val = ALPHABET.indexOf(cleanStr[i]);
+        if (val === -1) continue;
+        value = (value << 5) | val;
+        bits += 5;
+
+        if (bits >= 8) {
+            bytes.push((value >>> (bits - 8)) & 255);
+            bits -= 8;
+        }
+    }
+    return new Uint8Array(bytes);
+}
+
+// Base32 Encoder
+function base32Encode(bytes) {
+    if (!bytes || bytes.length === 0) return '';
+    const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+    let bits = 0;
+    let value = 0;
+    let output = '';
+
+    for (let i = 0; i < bytes.length; i++) {
+        value = (value << 8) | bytes[i];
+        bits += 8;
+
+        while (bits >= 5) {
+            output += ALPHABET[(value >>> (bits - 5)) & 31];
+            bits -= 5;
+        }
+    }
+    if (bits > 0) {
+        output += ALPHABET[(value << (5 - bits)) & 31];
+    }
+    return output;
+}
+
+// Dynamic 6-digit TOTP Calculation (RFC 6238 via Web Crypto API)
+async function generateTOTP(secretBase32, windowTime = 30, numDigits = 6) {
+    try {
+        if (!secretBase32) return '------';
+        const keyBytes = base32Decode(secretBase32);
+        if (keyBytes.length === 0) return '------';
+
+        const epoch = Math.floor(Date.now() / 1000);
+        const counter = Math.floor(epoch / windowTime);
+
+        const buffer = new ArrayBuffer(8);
+        const view = new DataView(buffer);
+        view.setUint32(0, 0, false);
+        view.setUint32(4, counter, false);
+
+        const cryptoKey = await window.crypto.subtle.importKey(
+            'raw',
+            keyBytes,
+            { name: 'HMAC', hash: { name: 'SHA-1' } },
+            false,
+            ['sign']
+        );
+
+        const signature = await window.crypto.subtle.sign('HMAC', cryptoKey, buffer);
+        const hmac = new Uint8Array(signature);
+
+        const offset = hmac[hmac.length - 1] & 0x0f;
+        const binary =
+            ((hmac[offset] & 0x7f) << 24) |
+            ((hmac[offset + 1] & 0xff) << 16) |
+            ((hmac[offset + 2] & 0xff) << 8) |
+            (hmac[offset + 3] & 0xff);
+
+        let otp = (binary % Math.pow(10, numDigits)).toString();
+        while (otp.length < numDigits) {
+            otp = '0' + otp;
+        }
+        return otp;
+    } catch (e) {
+        console.error('Error calculando TOTP:', e);
+        return '------';
+    }
+}
+
+// Protobuf & Google Authenticator Export Parser (otpauth-migration://offline?data=...)
+function parseGoogleAuthMigration(uri) {
+    try {
+        const dataMatch = uri.match(/[?&]data=([^&]+)/);
+        if (!dataMatch) return null;
+        const dataParam = decodeURIComponent(dataMatch[1]);
+
+        const binaryStr = atob(dataParam);
+        const bytes = new Uint8Array(binaryStr.length);
+        for (let i = 0; i < binaryStr.length; i++) {
+            bytes[i] = binaryStr.charCodeAt(i);
+        }
+
+        const accounts = [];
+        let pos = 0;
+
+        while (pos < bytes.length) {
+            const tag = bytes[pos++];
+            const fieldNum = tag >> 3;
+            const wireType = tag & 0x07;
+
+            if (fieldNum === 1 && wireType === 2) {
+                const len = readVarint(bytes, pos);
+                pos = len.newPos;
+                const endPos = pos + len.value;
+                const otpParam = parseOtpParameters(bytes, pos, endPos);
+                if (otpParam && otpParam.secret) {
+                    accounts.push(otpParam);
+                }
+                pos = endPos;
+            } else {
+                pos = skipProtobufField(bytes, pos, wireType);
+            }
+        }
+        return accounts;
+    } catch (e) {
+        console.error('Error parseando migración de Google Auth:', e);
+        return null;
+    }
+}
+
+function parseOtpParameters(bytes, start, end) {
+    let pos = start;
+    let secret = null;
+    let name = '';
+    let issuer = '';
+
+    while (pos < end) {
+        const tag = bytes[pos++];
+        const fieldNum = tag >> 3;
+        const wireType = tag & 0x07;
+
+        if (fieldNum === 1 && wireType === 2) {
+            const len = readVarint(bytes, pos);
+            pos = len.newPos;
+            const secretBytes = bytes.subarray(pos, pos + len.value);
+            secret = base32Encode(secretBytes);
+            pos += len.value;
+        } else if (fieldNum === 2 && wireType === 2) {
+            const len = readVarint(bytes, pos);
+            pos = len.newPos;
+            name = new TextDecoder().decode(bytes.subarray(pos, pos + len.value));
+            pos += len.value;
+        } else if (fieldNum === 3 && wireType === 2) {
+            const len = readVarint(bytes, pos);
+            pos = len.newPos;
+            issuer = new TextDecoder().decode(bytes.subarray(pos, pos + len.value));
+            pos += len.value;
+        } else {
+            pos = skipProtobufField(bytes, pos, wireType);
+        }
+    }
+    return { secret, name, issuer };
+}
+
+function readVarint(bytes, pos) {
+    let result = 0;
+    let shift = 0;
+    while (pos < bytes.length) {
+        const b = bytes[pos++];
+        result |= (b & 0x7f) << shift;
+        if ((b & 0x80) === 0) break;
+        shift += 7;
+    }
+    return { value: result, newPos: pos };
+}
+
+function skipProtobufField(bytes, pos, wireType) {
+    if (wireType === 0) {
+        while (pos < bytes.length && (bytes[pos++] & 0x80) !== 0);
+    } else if (wireType === 2) {
+        const len = readVarint(bytes, pos);
+        pos = len.newPos + len.value;
+    } else if (wireType === 1) {
+        pos += 8;
+    } else if (wireType === 5) {
+        pos += 4;
+    }
+    return pos;
+}
+
+// Universal QR URI Parser
+function parseOtpAuthUri(uriText) {
+    if (!uriText) return null;
+    const text = uriText.trim();
+
+    if (text.startsWith('otpauth-migration://')) {
+        return parseGoogleAuthMigration(text);
+    }
+
+    if (text.startsWith('otpauth://')) {
+        try {
+            const url = new URL(text);
+            const path = decodeURIComponent(url.pathname.replace(/^\/\/?/, ''));
+            const secret = url.searchParams.get('secret');
+            const issuer = url.searchParams.get('issuer') || (path.includes(':') ? path.split(':')[0] : '');
+            const name = path.includes(':') ? path.split(':')[1] : path;
+
+            if (secret) {
+                return [{ secret: secret.toUpperCase(), name, issuer }];
+            }
+        } catch (e) {
+            console.error('Error parseando URI otpauth:', e);
+        }
+    }
+
+    // Direct secret check (Base32 format)
+    const cleanSecret = text.toUpperCase().replace(/\s+/g, '');
+    if (/^[A-Z2-7]{8,128}=*$/.test(cleanSecret)) {
+        return [{ secret: cleanSecret, name: 'Clave Manual', issuer: '' }];
+    }
+
+    return null;
+}
+
+// Render OTP View & Start Live Timer
+async function renderOtpView() {
+    const grid = document.getElementById('otp-grid');
+    const unlinkedGrid = document.getElementById('otp-unlinked-grid');
+    const unlinkedSection = document.getElementById('otp-unlinked-section');
+    const searchInput = document.getElementById('otp-search');
+    const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+    if (!grid) return;
+
+    // Filter accounts with TOTP secrets
+    const activeAccounts = accounts.filter(a => {
+        if (!a.totp_secret) return false;
+        if (!query) return true;
+        return a.email.toLowerCase().includes(query) || (a.totp_secret && a.totp_secret.toLowerCase().includes(query));
+    });
+
+    const unlinkedAccounts = accounts.filter(a => {
+        if (a.totp_secret) return false;
+        if (!query) return true;
+        return a.email.toLowerCase().includes(query);
+    });
+
+    if (activeAccounts.length === 0) {
+        grid.innerHTML = `
+            <div style="grid-column:1/-1; text-align:center; padding:40px 20px; background:rgba(255,255,255,0.02); border:1px dashed var(--glass-border); border-radius:12px;">
+                <i class="fa-solid fa-key" style="font-size:2.5rem; color:var(--primary); opacity:0.5; margin-bottom:15px;"></i>
+                <h3 style="margin-bottom:8px;">No hay Cuentas con OTP Dinámico (TOTP)</h3>
+                <p style="color:rgba(255,255,255,0.6); max-width:480px; margin:0 auto 20px auto; font-size:0.9rem;">
+                    Importa un código QR desde un archivo de imagen, escanea la pantalla o asigna manualmente una clave secreta a tus cuentas registradas.
+                </p>
+                <div style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap;">
+                    <button class="btn-primary" onclick="triggerQrImageUpload()">
+                        <i class="fa-solid fa-file-image"></i> Importar QR
+                    </button>
+                    <button class="btn-primary" onclick="startScreenQrScanner()" style="background:linear-gradient(135deg, #0ea5e9, #6366f1);">
+                        <i class="fa-solid fa-desktop"></i> Escanear Pantalla
+                    </button>
+                </div>
+            </div>
+        `;
+    } else {
+        const epoch = Math.floor(Date.now() / 1000);
+        const secondsLeft = 30 - (epoch % 30);
+        const progressPercent = ((30 - secondsLeft) / 30) * 100;
+
+        let html = '';
+        for (const acc of activeAccounts) {
+            const totpCode = await generateTOTP(acc.totp_secret);
+            const formattedCode = totpCode.length === 6 ? `${totpCode.slice(0, 3)} ${totpCode.slice(3)}` : totpCode;
+
+            html += `
+                <div class="card glass-card" style="padding:20px; position:relative; border-radius:12px; display:flex; flex-direction:column; justify-content:space-between; border:1px solid var(--glass-border);">
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+                            <div>
+                                <h3 style="margin:0; font-size:1.1rem; color:white; word-break:break-all;">
+                                    <i class="fa-solid fa-user-shield" style="color:var(--primary); margin-right:6px;"></i> ${acc.email}
+                                </h3>
+                                <span style="font-size:0.75rem; color:rgba(255,255,255,0.5);">ID Cuenta: #${acc.id}</span>
+                            </div>
+                            <button class="icon-btn" onclick="openModal('account', ${acc.id})" title="Editar Cuenta" style="background:rgba(255,255,255,0.05); width:32px; height:32px;">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                        </div>
+
+                        <!-- TOTP Display Box -->
+                        <div style="background:rgba(0,0,0,0.3); border:1px solid var(--glass-border); border-radius:10px; padding:15px; text-align:center; margin-bottom:15px; position:relative;">
+                            <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:1px; margin-bottom:6px;">
+                                Código TOTP Dinámico
+                            </div>
+                            <div style="font-family:monospace; font-size:2rem; font-weight:700; letter-spacing:3px; color:var(--primary); text-shadow:0 0 10px rgba(212,175,55,0.3);">
+                                ${formattedCode}
+                            </div>
+
+                            <!-- Countdown Bar -->
+                            <div style="width:100%; height:4px; background:rgba(255,255,255,0.1); border-radius:2px; margin-top:10px; overflow:hidden;">
+                                <div style="height:100%; width:${100 - progressPercent}%; background:var(--primary); transition:width 1s linear;"></div>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; font-size:0.75rem; color:rgba(255,255,255,0.6);">
+                                <span>Refresco en: <strong style="color:white;">${secondsLeft}s</strong></span>
+                                <button onclick="copyText('${totpCode}', event)" style="background:transparent; border:none; color:var(--primary); cursor:pointer; font-weight:600; font-size:0.8rem; display:inline-flex; align-items:center; gap:4px;">
+                                    <i class="fa-solid fa-copy"></i> Copiar Código
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Backup OTP Pill if exists -->
+                        ${acc.otp_token ? `
+                        <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.03); border:1px dashed rgba(255,255,255,0.15); padding:8px 12px; border-radius:8px; font-size:0.8rem; margin-bottom:10px;">
+                            <span style="color:rgba(255,255,255,0.7);"><i class="fa-solid fa-shield-halved" style="color:#eab308; margin-right:4px;"></i> OTP Respaldo: <strong>••••••</strong></span>
+                            <button onclick="copyText('${acc.otp_token}', event)" class="btn-secondary" style="font-size:0.75rem; padding:2px 8px;">
+                                <i class="fa-solid fa-copy"></i> Copiar
+                            </button>
+                        </div>
+                        ` : ''}
+                    </div>
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.05); padding-top:10px; margin-top:10px; font-size:0.8rem;">
+                        <span style="color:rgba(255,255,255,0.4); font-family:monospace;">Secret: ${acc.totp_secret.slice(0, 4)}...${acc.totp_secret.slice(-4)}</span>
+                        <button class="btn-secondary" onclick="unlinkAccountOtp(${acc.id})" style="color:#ef4444; border-color:rgba(239,68,68,0.3); background:rgba(239,68,68,0.05); padding:3px 8px; font-size:0.75rem;">
+                            <i class="fa-solid fa-link-slash"></i> Desvincular TOTP
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+        grid.innerHTML = html;
+    }
+
+    // Render Unlinked accounts section
+    if (unlinkedAccounts.length > 0) {
+        unlinkedSection.style.display = 'block';
+        let unlinkedHtml = '';
+        for (const acc of unlinkedAccounts) {
+            unlinkedHtml += `
+                <div class="card glass-card" style="padding:15px; border-radius:10px; display:flex; align-items:center; justify-content:space-between; border:1px solid var(--glass-border); background:rgba(15,23,42,0.4);">
+                    <div style="flex:1;">
+                        <div style="font-weight:600; color:white; font-size:0.95rem;">${acc.email}</div>
+                        <div style="font-size:0.75rem; color:rgba(255,255,255,0.5);">
+                            ${acc.otp_token ? `<i class="fa-solid fa-shield-halved" style="color:#eab308;"></i> Tiene OTP Respaldo` : 'Sin OTP asignado'}
+                        </div>
+                    </div>
+                    <button class="btn-primary" onclick="openManualOtpModal(${acc.id})" style="font-size:0.8rem; padding:6px 12px; display:inline-flex; align-items:center; gap:6px;">
+                        <i class="fa-solid fa-qrcode"></i> Vincular TOTP
+                    </button>
+                </div>
+            `;
+        }
+        unlinkedGrid.innerHTML = unlinkedHtml;
+    } else {
+        unlinkedSection.style.display = 'none';
+    }
+
+    // Start Live Refresher Interval if not already active
+    if (!otpTimerInterval) {
+        otpTimerInterval = setInterval(() => {
+            if (currentView === 'otp') {
+                renderOtpView();
+            }
+        }, 1000);
+    }
+}
+
+// Universal QR Canvas Decoder using native BarcodeDetector API + jsQR fallback
+async function decodeQrFromCanvas(canvas) {
+    if (!canvas || !canvas.width || !canvas.height) return null;
+
+    // 1. Try Native Browser BarcodeDetector (Supported out-of-the-box in Chrome, Edge, Opera)
+    if ('BarcodeDetector' in window) {
+        try {
+            const detector = new BarcodeDetector({ formats: ['qr_code'] });
+            const barcodes = await detector.detect(canvas);
+            if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+                return barcodes[0].rawValue;
+            }
+        } catch (e) {
+            console.warn('BarcodeDetector error, falling back to jsQR:', e);
+        }
+    }
+
+    // 2. Fallback to jsQR
+    try {
+        if (window.jsQR) {
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            if (imageData && imageData.data && imageData.data.length === canvas.width * canvas.height * 4) {
+                const code = window.jsQR(imageData.data, imageData.width, imageData.height);
+                if (code && code.data) return code.data;
+            }
+        }
+    } catch (e) {
+        console.warn('jsQR fallback error:', e);
+    }
+
+    return null;
+}
+
+// QR Image File Handler
+function triggerQrImageUpload() {
+    const input = document.getElementById('otp-qr-file-input');
+    if (input) input.click();
+}
+
+function handleQrFileSelected(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = new Image();
+        img.onload = async () => {
+            const width = img.naturalWidth || img.width;
+            const height = img.naturalHeight || img.height;
+
+            if (!width || !height) {
+                alert('No se pudo determinar las dimensiones de la imagen.');
+                return;
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            const qrRawText = await decodeQrFromCanvas(canvas);
+
+            if (qrRawText) {
+                const otps = parseOtpAuthUri(qrRawText);
+                if (otps && otps.length > 0) {
+                    openOtpImportModal(otps);
+                } else {
+                    alert('El código QR fue leído correctamente pero no contiene una clave OTP válida (otpauth:// u otpauth-migration://).');
+                }
+            } else {
+                alert('No se pudo detectar ningún código QR claro en la imagen. Asegúrate de cargar una imagen nítida del código QR.');
+            }
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+    event.target.value = '';
+}
+
+// Screen QR Scanner (getDisplayMedia)
+async function startScreenQrScanner() {
+    try {
+        const modal = document.getElementById('modal-screen-scanner');
+        const video = document.getElementById('screen-scanner-video');
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+            alert('Tu navegador no soporta la captura de pantalla directa (getDisplayMedia).');
+            return;
+        }
+
+        screenStream = await navigator.mediaDevices.getDisplayMedia({
+            video: { cursor: "always" },
+            audio: false
+        });
+
+        if (video) {
+            video.srcObject = screenStream;
+        }
+        if (modal) {
+            modal.classList.add('show');
+        }
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        screenScanTimer = setInterval(async () => {
+            if (!video || video.readyState !== video.HAVE_ENOUGH_DATA) return;
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const qrRawText = await decodeQrFromCanvas(canvas);
+
+            if (qrRawText) {
+                const otps = parseOtpAuthUri(qrRawText);
+                if (otps && otps.length > 0) {
+                    stopScreenQrScanner();
+                    openOtpImportModal(otps);
+                }
+            }
+        }, 500);
+
+        screenStream.getVideoTracks()[0].onended = () => {
+            stopScreenQrScanner();
+        };
+
+    } catch (e) {
+        stopScreenQrScanner();
+        if (e.name === 'NotAllowedError') {
+            console.log('Selección de pantalla cancelada por el usuario.');
+        } else {
+            console.error('Error al iniciar escáner de pantalla:', e);
+            alert('No se pudo acceder a la captura de pantalla: ' + (e.message || e));
+        }
+    }
+}
+
+function stopScreenQrScanner() {
+    if (screenScanTimer) {
+        clearInterval(screenScanTimer);
+        screenScanTimer = null;
+    }
+    if (screenStream) {
+        screenStream.getTracks().forEach(track => track.stop());
+        screenStream = null;
+    }
+    const modal = document.getElementById('modal-screen-scanner');
+    if (modal) {
+        modal.classList.remove('show');
+    }
+}
+
+// Modal OTP Import & Bind
+function openOtpImportModal(otpList) {
+    importedOtpBuffer = otpList || [];
+    const modal = document.getElementById('modal-otp-import');
+    const container = document.getElementById('otp-import-items-container');
+
+    if (!modal || !container) return;
+
+    let matchedCount = 0;
+    let html = '';
+
+    importedOtpBuffer.forEach((item, index) => {
+        let matchedAccountId = item.prefillAccId || '';
+
+        if (!matchedAccountId && item.name) {
+            const nameLower = item.name.toLowerCase();
+            const matched = accounts.find(a => {
+                const emailLower = a.email.toLowerCase();
+                const prefix = emailLower.split('@')[0];
+                return emailLower.includes(nameLower) || nameLower.includes(emailLower) || nameLower.includes(prefix);
+            });
+            if (matched) matchedAccountId = matched.id;
+        }
+
+        if (matchedAccountId) matchedCount++;
+
+        const accountOptions = accounts.map(a => `<option value="${a.id}" ${a.id == matchedAccountId ? 'selected' : ''}>${a.email}</option>`).join('');
+
+        html += `
+            <div style="background:rgba(255,255,255,0.03); border:1px solid var(--glass-border); border-radius:10px; padding:15px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <div style="font-weight:700; color:var(--primary); font-size:0.95rem;">
+                        <i class="fa-solid fa-qrcode"></i> ${item.issuer ? item.issuer + ' - ' : ''}${item.name || 'OTP Detectado'}
+                    </div>
+                    <span style="font-size:0.75rem; color:rgba(255,255,255,0.5); font-family:monospace;">${item.secret.slice(0, 6)}...</span>
+                </div>
+                <div class="form-group" style="margin-top:8px;">
+                    <label style="font-size:0.8rem;">Seleccionar Cuenta para Vincular:</label>
+                    <select id="import-account-select-${index}" style="width:100%; padding:0.6rem; background:rgba(15,23,42,0.8); border:1px solid var(--glass-border); border-radius:8px; color:white;">
+                        <option value="">-- No vincular este OTP --</option>
+                        ${accountOptions}
+                    </select>
+                </div>
+            </div>
+        `;
+    });
+
+    if (matchedCount > 0) {
+        html = `
+            <div style="background:rgba(212,175,55,0.1); border:1px solid var(--primary); padding:10px 14px; border-radius:8px; margin-bottom:15px; font-size:0.85rem; color:var(--primary); display:flex; align-items:center; justify-content:space-between;">
+                <span><i class="fa-solid fa-wand-magic-sparkles"></i> <strong>${matchedCount} cuenta(s)</strong> vinculada(s) automáticamente por coincidencia de correo.</span>
+            </div>
+        ` + html;
+    }
+
+    container.innerHTML = html;
+    modal.classList.add('show');
+}
+
+function closeOtpImportModal() {
+    const modal = document.getElementById('modal-otp-import');
+    if (modal) modal.classList.remove('show');
+    importedOtpBuffer = [];
+}
+
+async function saveImportedOtps() {
+    let savedCount = 0;
+
+    for (let i = 0; i < importedOtpBuffer.length; i++) {
+        const item = importedOtpBuffer[i];
+        const select = document.getElementById(`import-account-select-${i}`);
+        if (select && select.value) {
+            const accId = parseInt(select.value);
+            try {
+                const res = await fetch(`${API_URL}/accounts/${accId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ totp_secret: item.secret })
+                });
+                if (res.ok) savedCount++;
+            } catch (e) {
+                console.error('Error vinculando OTP a cuenta:', e);
+            }
+        }
+    }
+
+    closeOtpImportModal();
+    if (savedCount > 0) {
+        showToast(`¡${savedCount} clave(s) TOTP vinculada(s) con éxito!`);
+        fetchAccounts().then(() => renderOtpView());
+    }
+}
+
+// Manual OTP Modal / Unlink
+function openManualOtpModal(prefillAccId = null) {
+    const acc = prefillAccId ? accounts.find(a => a.id == prefillAccId) : null;
+    const promptText = acc ? `Ingresa la clave secreta OTP Base32 para ${acc.email}:` : 'Ingresa la clave secreta OTP Base32 (ej. JBSWY3DPEHPK3PXP):';
+    const secret = prompt(promptText);
+    if (!secret) return;
+
+    const cleanSecret = secret.trim().toUpperCase().replace(/\s+/g, '');
+    if (!/^[A-Z2-7]{8,128}=*$/.test(cleanSecret)) {
+        alert('Formato de clave Base32 inválido. Asegúrate de incluir solo caracteres de A-Z y 2-7.');
+        return;
+    }
+
+    openOtpImportModal([{ secret: cleanSecret, name: acc ? acc.email : 'Manual', issuer: '', prefillAccId: prefillAccId }]);
+}
+
+async function unlinkAccountOtp(accountId) {
+    if (!confirm('¿Seguro que deseas desvincular el OTP dinámico (TOTP) de esta cuenta? El OTP de Respaldo se mantendrá.')) return;
+
+    try {
+        const res = await fetch(`${API_URL}/accounts/${accountId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ totp_secret: '' })
+        });
+        if (res.ok) {
+            showToast('TOTP desvinculado con éxito.');
+            fetchAccounts().then(() => renderOtpView());
+        }
+    } catch (e) {
+        console.error('Error desvinculando OTP:', e);
+    }
+}
+
+
 
 

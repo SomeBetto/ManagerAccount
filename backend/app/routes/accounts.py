@@ -11,7 +11,8 @@ def create_account():
             'email': data['email'],
             'password': data['password'],
             'pin': data.get('pin'),
-            'otp_token': data.get('otp_token')
+            'otp_token': data.get('otp_token'),
+            'totp_secret': data.get('totp_secret')
         }
         inserted = ExcelDB.insert('accounts', new_account)
         return jsonify(inserted), 201
@@ -43,6 +44,7 @@ def update_account(id):
         if 'password' in data: update_data['password'] = data['password']
         if 'pin' in data: update_data['pin'] = data['pin']
         if 'otp_token' in data: update_data['otp_token'] = data['otp_token']
+        if 'totp_secret' in data: update_data['totp_secret'] = data['totp_secret']
         
         updated = ExcelDB.update('accounts', id, update_data)
         return jsonify(updated)
@@ -94,6 +96,28 @@ def save_account_sharing(acc_id):
             inserted = ExcelDB.insert('account_sharing', save_data)
             return jsonify(inserted), 201
     except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+@bp.route('/batch-totp', methods=['POST'])
+def batch_update_totp():
+    data = request.json or {}
+    updates = data.get('updates', [])
+    if not updates:
+        return jsonify({'message': 'No updates provided'})
+    try:
+        updated_count = 0
+        for u in updates:
+            acc_id = u.get('id')
+            secret = u.get('totp_secret')
+            if acc_id and secret:
+                account = ExcelDB.get_by_id('accounts', int(acc_id))
+                if account:
+                    ExcelDB.update('accounts', int(acc_id), {'totp_secret': secret})
+                    updated_count += 1
+        return jsonify({'message': f'Migrated {updated_count} accounts'})
+    except Exception as e:
+        from flask import current_app
+        current_app.logger.error(str(e), exc_info=True)
         return jsonify({'error': str(e)}), 400
 
 @bp.route('/batch-delete', methods=['POST'])

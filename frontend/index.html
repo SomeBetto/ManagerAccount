@@ -92,10 +92,11 @@
                             <i class="fa-solid fa-chevron-down group-arrow"></i>
                         </div>
                         <ul class="nav-group-items">
-                            <li onclick="switchView('autotool')" data-view="autotool"><i class="fa-solid fa-robot"></i> <span data-i18n="sidebar_autotool">Auto Tool</span></li>
                             <li onclick="switchView('contadores')" data-view="contadores"><i class="fa-solid fa-clock"></i> <span data-i18n="sidebar_contadores">Contadores</span></li>
                             <li onclick="switchView('coupons')" data-view="coupons"><i class="fa-solid fa-ticket"></i> <span data-i18n="sidebar_coupons">Coupons</span></li>
+                            <li onclick="switchView('otp')" data-view="otp"><i class="fa-solid fa-key"></i> <span data-i18n="sidebar_otp">Generador OTP</span></li>
                         </ul>
+
                     </li>
                 </ul>
             </div>
@@ -113,8 +114,8 @@
                     <h1 id="page-title"><span data-i18n="header_accounts">Accounts</span> <span id="account-count"
                             style="font-size:1rem; opacity:0.7; font-weight:400;">(0)</span></h1>
 
-                    <button id="btn-upload-accounts" class="icon-btn" onclick="triggerUpload('accounts')"
-                        style="background:rgba(255,255,255,0.1); width:35px; height:35px; border-radius:50%; display:inline-flex;"
+                    <button id="btn-upload-accounts-icon" class="icon-btn" onclick="triggerUpload('accounts')"
+                        style="background:rgba(255,255,255,0.1); width:35px; height:35px; border-radius:50%; display:none;"
                         title="Import Accounts CSV">
                         <i class="fa-solid fa-cloud-arrow-up"></i>
                     </button>
@@ -132,17 +133,17 @@
                         <i class="fa-solid fa-play"></i>
                     </button>
 
-                    <button id="btn-upload-characters" class="icon-btn" onclick="triggerUpload('characters')"
+                    <button id="btn-upload-characters-icon" class="icon-btn" onclick="triggerUpload('characters')"
                         style="background:rgba(255,255,255,0.1); width:35px; height:35px; border-radius:50%; display:none;"
                         title="Import Characters CSV">
                         <i class="fa-solid fa-cloud-arrow-up"></i>
                     </button>
                 </div>
-                <button class="btn-primary" onclick="openModal('account')" id="btn-upload-accounts"
-                    style="display:inline-flex;">
+                <button class="btn-primary" onclick="openModal('account')" id="btn-add-account"
+                    style="display:none;">
                     <i class="fa-solid fa-plus"></i> <span data-i18n="btn_add_account">New Account</span>
                 </button>
-                <button class="btn-primary" onclick="openModal('character')" id="btn-upload-characters"
+                <button class="btn-primary" onclick="openModal('character')" id="btn-add-character"
                     style="display:none;">
                     <i class="fa-solid fa-plus"></i> <span data-i18n="btn_add_character">New Character</span>
                 </button>
@@ -502,6 +503,51 @@
 
                 <div class="card-grid" id="expiring-grid">
                     <!-- Expiring item cards populated dynamically -->
+                </div>
+            </div>
+
+            <!-- OTP Generator View -->
+            <div id="otp-view" class="view-section">
+                <header style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                    <div>
+                        <h2 style="display:flex; align-items:center; gap:10px; margin:0; color:var(--primary);">
+                            <i class="fa-solid fa-key"></i> <span data-i18n="sidebar_otp">Generador OTP</span>
+                        </h2>
+                        <p style="color:rgba(255,255,255,0.6); font-size:0.85rem; margin-top:4px;">
+                            Códigos TOTP dinámicos de 6 dígitos vinculados a tus cuentas registradas.
+                        </p>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                        <input type="text" id="otp-search" placeholder="Buscar por email..." oninput="renderOtpView()" style="padding: 0.5rem 1rem; border-radius: 8px; background: rgba(0,0,0,0.3); color: white; border: 1px solid var(--glass-border); min-width: 200px;">
+                        
+                        <button class="btn-primary" onclick="triggerQrImageUpload()" style="display:inline-flex; align-items:center; gap:8px;">
+                            <i class="fa-solid fa-file-image"></i> Importar QR (Imagen)
+                        </button>
+                        <input type="file" id="otp-qr-file-input" accept="image/*" style="display:none;" onchange="handleQrFileSelected(event)">
+
+                        <button class="btn-primary" onclick="startScreenQrScanner()" style="display:inline-flex; align-items:center; gap:8px; background:linear-gradient(135deg, #0ea5e9, #6366f1);">
+                            <i class="fa-solid fa-desktop"></i> Seleccionar QR en Pantalla
+                        </button>
+
+                        <button class="btn-secondary" onclick="openManualOtpModal()" style="display:inline-flex; align-items:center; gap:8px;">
+                            <i class="fa-solid fa-plus"></i> Agregar Manual
+                        </button>
+                    </div>
+                </header>
+
+                <!-- Cards grid for Active OTPs -->
+                <div class="card-grid" id="otp-grid">
+                    <!-- Populated dynamically -->
+                </div>
+
+                <!-- Unlinked Accounts Section -->
+                <div id="otp-unlinked-section" style="margin-top:2.5rem; display:none;">
+                    <h3 style="font-size:1.1rem; opacity:0.8; margin-bottom:1rem; display:flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-user-plus" style="color:var(--primary);"></i> Cuentas Registradas sin OTP Dinámico
+                    </h3>
+                    <div class="card-grid" id="otp-unlinked-grid">
+                        <!-- Populated dynamically -->
+                    </div>
                 </div>
             </div>
 
@@ -1215,6 +1261,49 @@
         </div>
     </div>
 
+    <!-- OTP Import / Bind Modal -->
+    <div id="modal-otp-import" class="modal">
+        <div class="modal-content glass-panel" style="max-width: 550px;">
+            <span class="close" onclick="closeOtpImportModal()">&times;</span>
+            <h2><i class="fa-solid fa-link" style="color:var(--primary);"></i> Vincular Código OTP (TOTP)</h2>
+            <p style="font-size:0.85rem; color:rgba(255,255,255,0.7); margin-bottom:15px;">
+                Asigna las claves OTP detectadas a las cuentas registradas en ManagerAccount.
+            </p>
+
+            <div id="otp-import-items-container" style="display:flex; flex-direction:column; gap:15px; max-height:400px; overflow-y:auto; padding-right:5px;">
+                <!-- Populated dynamically with parsed OTP records -->
+            </div>
+
+            <div class="modal-actions" style="margin-top:20px;">
+                <button type="button" class="btn-secondary" onclick="closeOtpImportModal()">Cancelar</button>
+                <button type="button" class="btn-primary" onclick="saveImportedOtps()">
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar Vinculación
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Screen QR Scanner Modal -->
+    <div id="modal-screen-scanner" class="modal">
+        <div class="modal-content glass-panel" style="max-width: 500px; text-align: center;">
+            <span class="close" onclick="stopScreenQrScanner()">&times;</span>
+            <h2 style="color:var(--primary);"><i class="fa-solid fa-expand"></i> Escaneando Pantalla</h2>
+            <p style="font-size:0.85rem; color:rgba(255,255,255,0.8); margin-bottom:15px;">
+                Selecciona la ventana o pantalla que contiene el código QR. El sistema lo detectará automáticamente.
+            </p>
+            <div style="position:relative; width:100%; height:250px; background:#000; border-radius:12px; overflow:hidden; border:2px dashed var(--primary); display:flex; align-items:center; justify-content:center;">
+                <video id="screen-scanner-video" autoplay playsinline style="width:100%; height:100%; object-fit:contain;"></video>
+                <div id="screen-scanner-status" style="position:absolute; bottom:10px; background:rgba(0,0,0,0.7); padding:4px 12px; border-radius:20px; font-size:0.8rem; color:#4ade80;">
+                    <i class="fa-solid fa-spinner fa-spin"></i> Escaneando código QR en pantalla...
+                </div>
+            </div>
+            <div class="modal-actions" style="margin-top:15px;">
+                <button type="button" class="btn-secondary" onclick="stopScreenQrScanner()">Detener Escaneo</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/lib/jsqr.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
