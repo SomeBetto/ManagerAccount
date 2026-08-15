@@ -553,23 +553,53 @@
 
             <!-- Compact Overlay View (visible only in compact-mode) -->
             <div id="compact-view" style="display:none; flex-direction:column; gap:10px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--glass-border); padding-bottom:8px; margin-bottom:8px;">
-                    <span style="font-weight:700; color:var(--primary); font-size:1.1rem; display:flex; align-items:center; gap:8px;">
-                        <i class="fa-solid fa-compress"></i> Overlay Flyff
-                    </span>
-                    <button class="icon-btn" onclick="toggleCompactMode()" title="Volver al Modo Completo">
+                <!-- Overlay Header -->
+                <div class="compact-header-bar">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span class="compact-title-badge">
+                            <i class="fa-solid fa-compress"></i> Overlay Flyff
+                        </span>
+                        <span id="compact-timer-badge" class="compact-live-badge" title="TOTP Live Sync">
+                            <i class="fa-solid fa-shield-halved"></i> Live 2FA
+                        </span>
+                    </div>
+                    <button class="icon-btn" onclick="toggleCompactMode()" title="Volver al Modo Completo (Esc)">
                         <i class="fa-solid fa-expand"></i>
                     </button>
                 </div>
                 
-                <!-- Search input in overlay -->
-                <div style="position:relative; margin-bottom:4px;">
-                    <input type="text" id="compact-search" placeholder="Buscar cuenta o personaje..." oninput="renderCompactList()" 
-                        style="width:100%; padding:0.6rem 0.6rem 0.6rem 2rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.3); color:white; font-size:0.85rem; outline:none;">
-                    <i class="fa-solid fa-magnifying-glass" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); opacity:0.5; font-size:0.8rem; color:var(--text-muted);"></i>
+                <!-- Boss Respawn Timers Ticker -->
+                <div id="compact-respawn-ticker" class="compact-ticker-bar">
+                    <!-- Ticker item list populated dynamically -->
                 </div>
                 
-                <div id="compact-list" style="display:flex; flex-direction:column; gap:8px; overflow-y:auto; max-height:calc(100vh - 130px); padding-right:4px;">
+                <!-- Filter Chips -->
+                <div class="compact-filter-bar">
+                    <button class="compact-chip active" id="chip-filter-all" onclick="setCompactFilter('all')">
+                        <i class="fa-solid fa-list"></i> Todas
+                    </button>
+
+                    <button class="compact-chip" id="chip-filter-fav" onclick="setCompactFilter('favorites')">
+                        <i class="fa-solid fa-star" style="color:#d4af37;"></i> Favoritos
+                    </button>
+
+                    <div style="position:relative; flex:1;">
+                        <select id="compact-zone-select" class="compact-zone-dropdown" onchange="setCompactFilter(this.value)">
+                            <option value="all">Todas las Zonas</option>
+                            <!-- Login zones added dynamically -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Search Input in Overlay -->
+                <div style="position:relative;">
+                    <input type="text" id="compact-search" placeholder="Buscar cuenta, personaje, clase..." oninput="renderCompactList()" 
+                        style="width:100%; padding:0.55rem 0.6rem 0.55rem 2.2rem; border-radius:10px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.35); color:white; font-size:0.85rem; outline:none;">
+                    <i class="fa-solid fa-magnifying-glass" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); opacity:0.6; font-size:0.8rem; color:var(--primary);"></i>
+                </div>
+                
+                <!-- Compact Cards Container -->
+                <div id="compact-list" class="compact-cards-container">
                     <!-- Compact list populated dynamically -->
                 </div>
             </div>

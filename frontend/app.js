@@ -2322,7 +2322,8 @@ async function launchSelectedAccounts() {
 }
 
 let isCompact = false;
-let compactCycles = {}; // Stores { accountId: 'email' | 'password' | 'pin' | 'otp' }
+let compactFilter = 'all'; // 'all' | 'favorites' | zoneId
+let compactTimerInterval = null;
 
 async function toggleCompactMode() {
     isCompact = !isCompact;
@@ -2339,65 +2340,236 @@ async function toggleCompactMode() {
             await fetchAccounts();
             await fetchCharacters();
         } catch (e) { console.error("Error fetching compact mode data:", e); }
+        
         renderCompactList();
+
+        // Start live ticker & TOTP refresh interval every 1 sec
+        if (!compactTimerInterval) {
+            compactTimerInterval = setInterval(() => {
+                if (isCompact) {
+                    renderCompactList();
+                }
+            }, 1000);
+        }
     } else {
         compactView.style.display = 'none';
+        if (compactTimerInterval) {
+            clearInterval(compactTimerInterval);
+            compactTimerInterval = null;
+        }
         switchView(currentView);
     }
 }
 
-function renderCompactList() {
+function setCompactFilter(filterVal) {
+    compactFilter = filterVal;
+    
+    // Update active tab styles
+    const chipAll = document.getElementById('chip-filter-all');
+    const chipFav = document.getElementById('chip-filter-fav');
+    const zoneSelect = document.getElementById('compact-zone-select');
+
+    if (chipAll) chipAll.classList.toggle('active', filterVal === 'all');
+    if (chipFav) chipFav.classList.toggle('active', filterVal === 'favorites');
+    if (zoneSelect && filterVal !== 'all' && filterVal !== 'favorites') {
+        zoneSelect.value = filterVal;
+    }
+
+    renderCompactList();
+}
+
+async function renderCompactList() {
     const listEl = document.getElementById('compact-list');
     if (!listEl) return;
 
+    // Render Boss Respawn Ticker in Overlay Header
+    renderCompactRespawnTicker();
+
     const searchVal = document.getElementById('compact-search')?.value.toLowerCase().trim() || '';
 
-    // Filter accounts by email or character names
+    // Populate zone select dropdown
+    populateCompactZoneDropdown();
+
     let filteredAccounts = [...accounts];
+
+    // 1. Filter by tab/zone
+    if (compactFilter === 'favorites') {
+        const favCharAccountIds = characters.filter(c => c.is_favorite).map(c => c.account_id);
+        filteredAccounts = filteredAccounts.filter(acc => favCharAccountIds.includes(acc.id));
+    } else if (compactFilter !== 'all') {
+        // Filter by Login Zone ID
+        const selectedZone = loginZones.find(z => z.id == compactFilter);
+        if (selectedZone && selectedZone.characterIds) {
+            const zoneAccountIds = characters
+                .filter(c => selectedZone.characterIds.includes(c.id))
+                .map(c => c.account_id);
+            filteredAccounts = filteredAccounts.filter(acc => zoneAccountIds.includes(acc.id));
+        }
+    }
+
+    // 2. Filter by search input
     if (searchVal) {
         filteredAccounts = filteredAccounts.filter(acc => {
             const emailMatch = acc.email.toLowerCase().includes(searchVal);
-
             const accChars = characters.filter(c => c.account_id == acc.id);
-            const charMatch = accChars.some(char => char.name.toLowerCase().includes(searchVal));
-
+            const charMatch = accChars.some(char => 
+                char.name.toLowerCase().includes(searchVal) || 
+                (char.class_name && char.class_name.toLowerCase().includes(searchVal))
+            );
             return emailMatch || charMatch;
         });
     }
 
-    listEl.innerHTML = filteredAccounts.map(acc => {
+    if (filteredAccounts.length === 0) {
+        listEl.innerHTML = `
+            <div style="text-align:center; padding:2rem 1rem; color:var(--text-muted); font-size:0.85rem;">
+                <i class="fa-solid fa-filter" style="font-size:1.5rem; opacity:0.3; margin-bottom:8px;"></i>
+                <div>No se encontraron cuentas o personajes.</div>
+            </div>
+        `;
+        return;
+    }
+
+    const epoch = Math.floor(Date.now() / 1000);
+    const secondsRemaining = 30 - (epoch % 30);
+    const progressPct = (secondsRemaining / 30) * 100;
+
+    // Build html asynchronously with calculated TOTP codes
+    const cardsHtml = await Promise.all(filteredAccounts.map(async acc => {
         const accChars = characters.filter(c => c.account_id == acc.id);
+
         const charHtml = accChars.map(char => `
             <div class="compact-char-item">
-                <span>${char.name} (${char.class_name || 'Vagrant'})</span>
+                <span>
+                    ${char.is_favorite ? '<i class="fa-solid fa-star" style="color:#d4af37; font-size:0.7rem;"></i> ' : ''}
+                    <strong>${char.name}</strong> (${char.class_name || 'Vagrant'})
+                </span>
                 <span class="lvl">Lvl ${char.level || 0}</span>
             </div>
         `).join('');
 
-        const currentState = compactCycles[acc.id] || 'email';
-        let buttonText = 'Copiar Email';
-        if (currentState === 'password') buttonText = 'Copiar Contraseña';
-        if (currentState === 'pin') buttonText = `PIN: ${acc.pin || 'N/A'}`;
-        if (currentState === 'otp') buttonText = `OTP: ${acc.otp_token || 'N/A'}`;
+        // Calculate dynamic TOTP 6-digit code
+        let totpCode = '------';
+        if (acc.totp_secret) {
+            totpCode = await generateTOTP(acc.totp_secret);
+        }
 
         return `
             <div class="compact-card" id="compact-card-${acc.id}">
                 <div class="compact-card-header">
-                    <span style="font-size:0.85rem; opacity:0.8; word-break:break-all;">${acc.email}</span>
-                    <div style="display:flex; gap:4px;">
-                        <button class="icon-btn" onclick="triggerAutoLogin(${acc.id})" title="Auto-Login (UAC)"><i class="fa-solid fa-keyboard" style="font-size:0.8rem;"></i></button>
-                        <button class="icon-btn" onclick="launchSingleAccount(${acc.id})" title="Lanzar en PC"><i class="fa-solid fa-play" style="font-size:0.8rem;"></i></button>
-                    </div>
+                    <span style="font-size:0.85rem; font-weight:700; word-break:break-all; color:var(--text-main);">
+                        ${acc.email}
+                    </span>
+                    <button class="icon-btn" onclick="launchSingleAccount(${acc.id})" title="Lanzar en PC">
+                        <i class="fa-solid fa-play" style="font-size:0.75rem;"></i>
+                    </button>
                 </div>
-                <div style="display:flex; flex-direction:column; gap:4px; margin: 4px 0;">
+
+                <!-- Characters list -->
+                <div style="display:flex; flex-direction:column; gap:3px; background:rgba(0,0,0,0.2); padding:6px; border-radius:6px;">
                     ${charHtml || '<div style="font-size:0.7rem; opacity:0.5; font-style:italic;">Sin personajes</div>'}
                 </div>
-                <button class="compact-btn-cycle" id="cycle-btn-${acc.id}" onclick="cycleCredentials(${acc.id})">
-                    ${buttonText}
-                </button>
+
+                <!-- Dynamic Live TOTP Banner -->
+                <div class="compact-totp-box" title="Haz clic en Copiar TOTP para usar el código de 6 dígitos">
+                    <div>
+                        <div style="font-size:0.65rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">TOTP Dinámico</div>
+                        <div class="compact-totp-code" id="compact-totp-val-${acc.id}">${totpCode}</div>
+                    </div>
+                    <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+                        <span style="font-size:0.68rem; color:var(--primary); font-weight:700;">${secondsRemaining}s</span>
+                        <div style="width:40px; background:rgba(255,255,255,0.1); height:4px; border-radius:2px; overflow:hidden;">
+                            <div class="compact-totp-progress" style="width:${progressPct}%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Action Buttons -->
+                <div class="compact-btn-group">
+                    <button class="compact-action-btn" onclick="copyToClipboard('${acc.email}', 'Email copiado')" title="Copiar Email">
+                        <i class="fa-regular fa-envelope"></i> Email
+                    </button>
+                    <button class="compact-action-btn" onclick="copyToClipboard('${acc.password}', 'Contraseña copiada')" title="Copiar Contraseña">
+                        <i class="fa-solid fa-key"></i> Pass
+                    </button>
+                    <button class="compact-action-btn btn-totp" onclick="copyToClipboard('${totpCode}', 'TOTP copiado (${totpCode})')" title="Copiar TOTP 6 dígitos">
+                        <i class="fa-solid fa-shield-halved"></i> TOTP
+                    </button>
+                    <button class="compact-action-btn" onclick="copyToClipboard('${acc.pin || ''}', 'PIN copiado')" title="Copiar PIN (${acc.pin || 'N/A'})">
+                        <i class="fa-solid fa-lock"></i> PIN
+                    </button>
+                    <button class="compact-action-btn btn-autologin-comp" onclick="triggerAutoLogin(${acc.id})" title="Auto-Login SendInput (UAC)">
+                        <i class="fa-solid fa-bolt"></i> Login
+                    </button>
+                    <button class="compact-action-btn" onclick="copyToClipboard('${acc.otp_token || ''}', 'OTP Respaldo copiado')" title="Copiar OTP Respaldo">
+                        <i class="fa-solid fa-id-card"></i> OTP
+                    </button>
+                </div>
+            </div>
+        `;
+    }));
+
+    listEl.innerHTML = cardsHtml.join('');
+}
+
+function renderCompactRespawnTicker() {
+    const tickerEl = document.getElementById('compact-respawn-ticker');
+    if (!tickerEl) return;
+
+    if (!contadores || contadores.length === 0) {
+        tickerEl.style.display = 'none';
+        return;
+    }
+
+    tickerEl.style.display = 'flex';
+    const now = Date.now();
+
+    const activeTimers = contadores.filter(c => c.endTime !== null);
+    if (activeTimers.length === 0) {
+        tickerEl.innerHTML = `
+            <div style="font-size:0.72rem; color:var(--text-muted); opacity:0.7; width:100%; text-align:center;">
+                <i class="fa-regular fa-clock"></i> Sin contadores activos
+            </div>
+        `;
+        return;
+    }
+
+    tickerEl.innerHTML = activeTimers.map(timer => {
+        const isExpired = timer.endTime <= now;
+        let timeStr = '¡RESPAWN!';
+        if (!isExpired) {
+            const diffSec = Math.floor((timer.endTime - now) / 1000);
+            const m = Math.floor(diffSec / 60);
+            const s = diffSec % 60;
+            timeStr = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        return `
+            <div class="compact-ticker-item ${isExpired ? 'active' : ''}">
+                <i class="fa-solid ${isExpired ? 'fa-bell fa-bounce' : 'fa-stopwatch'}" style="${isExpired ? 'color:#ef4444;' : 'color:var(--primary);'}"></i>
+                <strong>${timer.name}</strong>: <span>${timeStr}</span>
             </div>
         `;
     }).join('');
+}
+
+function populateCompactZoneDropdown() {
+    const selectEl = document.getElementById('compact-zone-select');
+    if (!selectEl) return;
+
+    const currentVal = selectEl.value;
+    let optionsHtml = `<option value="all">Todas las Zonas</option>`;
+
+    if (loginZones && loginZones.length > 0) {
+        optionsHtml += loginZones.map(zone => `
+            <option value="${zone.id}">📍 ${zone.name} (${zone.characterIds ? zone.characterIds.length : 0})</option>
+        `).join('');
+    }
+
+    selectEl.innerHTML = optionsHtml;
+    if (currentVal && selectEl.querySelector(`option[value="${currentVal}"]`)) {
+        selectEl.value = currentVal;
+    }
 }
 
 async function launchSingleAccount(accountId) {
@@ -4608,14 +4780,18 @@ function closeConfigModal() {
     if (modal) modal.classList.remove('show');
 }
 
-// Global Keyboard Shortcuts: Escape key closes active modals
+// Global Keyboard Shortcuts: Escape key closes active modals or toggles compact mode
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         const modals = document.querySelectorAll('.modal.show');
-        modals.forEach(modal => {
-            modal.classList.remove('show');
-            if (modal.style.display === 'flex') modal.style.display = 'none';
-        });
+        if (modals.length > 0) {
+            modals.forEach(modal => {
+                modal.classList.remove('show');
+                if (modal.style.display === 'flex') modal.style.display = 'none';
+            });
+        } else if (isCompact) {
+            toggleCompactMode();
+        }
         if (typeof hideGearNameDropdown === 'function') hideGearNameDropdown();
         if (typeof hideExpiringCharDropdown === 'function') hideExpiringCharDropdown();
     }

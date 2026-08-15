@@ -54,8 +54,12 @@
 ## 📥 Instalación y Uso
 
 1. Ejecuta el archivo `instalar.bat` para configurar Python, Git y el entorno virtual (`venv`).
-2. Inicia la aplicación mediante `ManagerAccount.bat`.
-3. El navegador abrirá automáticamente `http://localhost:5000`.
+2. Ejecuta `ManagerAccount.bat` para acceder al **Menú Principal Interactivo**:
+   - **[1] Iniciar Aplicación:** Abre el servidor local en segundo plano y lanza el navegador en `http://localhost:5000`.
+   - **[2] Actualizar Aplicación:** Consulta y descarga automáticamente los últimos cambios desde Git y actualiza sus dependencias.
+   - **[3] Detener / Quitar de Ejecución:** Cierra de forma segura el servidor y libera el puerto 5000.
+   - **[4] Reparar Instalación:** Verifica, reconstruye el entorno virtual (`venv`), repara dependencias de Python y restaura carpetas y configuraciones faltantes.
+   - **[5] Salir:** Cierra la consola.
 
 ---
 
