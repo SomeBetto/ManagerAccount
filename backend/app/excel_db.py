@@ -105,10 +105,21 @@ import threading
 class ExcelDB:
     _cache = {}
     _file_lock = threading.Lock()
+    _workbook_cache = None
+    _workbook_cache_path = None
+    _workbook_cache_mtime_ns = None
 
     @classmethod
     def clear_cache(cls):
         cls._cache.clear()
+
+    @classmethod
+    def _clear_workbook_cache(cls):
+        if cls._workbook_cache is not None:
+            cls._workbook_cache.close()
+        cls._workbook_cache = None
+        cls._workbook_cache_path = None
+        cls._workbook_cache_mtime_ns = None
 
     @staticmethod
     def _get_workbook():
@@ -116,7 +127,18 @@ class ExcelDB:
         if not path or not os.path.exists(path):
             raise Exception("Ruta de archivo Excel no configurada o el archivo no existe.")
         try:
-            return openpyxl.load_workbook(path, data_only=True), path
+            mtime_ns = os.stat(path).st_mtime_ns
+            if (ExcelDB._workbook_cache is not None and
+                    ExcelDB._workbook_cache_path == path and
+                    ExcelDB._workbook_cache_mtime_ns == mtime_ns):
+                return ExcelDB._workbook_cache, path
+
+            ExcelDB._clear_workbook_cache()
+            workbook = openpyxl.load_workbook(path, data_only=True)
+            ExcelDB._workbook_cache = workbook
+            ExcelDB._workbook_cache_path = path
+            ExcelDB._workbook_cache_mtime_ns = mtime_ns
+            return workbook, path
         except Exception as e:
             error_msg = str(e)
             if 'Bad CRC-32' in error_msg or 'BadZipFile' in error_msg or 'is not a valid zip file' in error_msg or 'Zip' in error_msg:
@@ -139,6 +161,7 @@ class ExcelDB:
     def _save_workbook(wb, path):
         with ExcelDB._file_lock:
             wb.save(path)
+            ExcelDB._clear_workbook_cache()
 
     @staticmethod
     def _get_actual_sheetname(wb, target_name):
@@ -388,6 +411,15 @@ class ExcelDB:
                 try: return int(c.get('level', 0) or 0)
                 except: return 0
             current_data.sort(key=get_level, reverse=True)
+
+        if table_name != 'characters':
+            # Las tablas sin ordenamiento pueden añadir una fila sin reescribir todo el libro.
+            row_num = max(ws.max_row + 1, header_row_idx + 2)
+            for col_idx, h in enumerate(headers, 1):
+                ws.cell(row=row_num, column=col_idx, value=data_dict.get(h))
+            cls._save_workbook(wb, path)
+            cls.clear_cache()
+            return data_dict
 
         # 5. REWRITE SHEET
         # Delete all data rows after header

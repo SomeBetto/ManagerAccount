@@ -28,7 +28,7 @@ export function parseElementAndRefine(elemStr) {
 }
 
 export async function apiFetch(endpoint, options = {}) {
-    const url = endpoint.startswith('http') ? endpoint : `${API_URL}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+    const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
     const response = await fetch(url, options);
     return response;
 }

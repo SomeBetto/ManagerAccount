@@ -1,3 +1,5 @@
 flask
 flask-cors
 openpyxl
+opencv-python
+zxing-cpp

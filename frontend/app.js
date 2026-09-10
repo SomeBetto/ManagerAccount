@@ -355,8 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadContadores();
     startTimerEngine();
     fetchConfig().then(async () => {
-        await fetchAccounts();
-        await fetchCharacters();
+        await Promise.all([fetchAccounts(), fetchCharacters()]);
         applyTranslations();
         initSidebar();
     });
@@ -420,23 +419,23 @@ function switchView(view) {
     } else if (view === 'characters') {
         charactersView.classList.add('active');
         pageTitle.innerHTML = `${i18n('page_title_characters')} <span id="char-count" style="font-size:1rem; opacity:0.7; font-weight:400;">(${characters.length})</span>`;
-        fetchAccounts().then(() => fetchCharacters());
+        Promise.all([fetchAccounts(), fetchCharacters()]);
     } else if (view === 'favorites') {
         if (favoritesView) favoritesView.classList.add('active');
         pageTitle.innerHTML = `${i18n('page_title_favorites')} <span id="fav-count" style="font-size:1rem; opacity:0.7; font-weight:400;">(0)</span>`;
-        fetchAccounts().then(() => fetchCharacters());
+        Promise.all([fetchAccounts(), fetchCharacters()]);
     } else if (view === 'loginzone') {
         if (loginZoneView) loginZoneView.classList.add('active');
         pageTitle.innerHTML = i18n('page_title_loginzone');
-        fetchAccounts().then(() => fetchCharacters().then(() => renderLoginZones()));
+        Promise.all([fetchAccounts(), fetchCharacters()]).then(() => renderLoginZones());
     } else if (view === 'items') {
         if (itemsView) itemsView.classList.add('active');
         pageTitle.innerHTML = i18n('page_title_items');
-        fetchCharacters().then(() => fetchItems());
+        Promise.all([fetchCharacters(), fetchItems()]);
     } else if (view === 'vacantes') {
         if (vacantesView) vacantesView.classList.add('active');
         pageTitle.innerHTML = `${i18n('page_title_vacantes')} <span id="vacantes-count" style="font-size:1rem; opacity:0.7; font-weight:400;">(0)</span>`;
-        fetchAccounts().then(() => fetchCharacters().then(() => renderVacantes()));
+        Promise.all([fetchAccounts(), fetchCharacters()]).then(() => renderVacantes());
     } else if (view === 'levelzone') {
         if (levelZoneView) levelZoneView.classList.add('active');
         pageTitle.innerHTML = i18n('page_title_levelzone');
@@ -449,7 +448,7 @@ function switchView(view) {
         if (couponsView) couponsView.classList.add('active');
         pageTitle.innerHTML = i18n('page_title_coupons');
         // Ensure data exists before starting flow
-        fetchAccounts().then(() => fetchCharacters().then(() => resetCouponFlow()));
+        Promise.all([fetchAccounts(), fetchCharacters()]).then(() => resetCouponFlow());
     } else if (view === 'contadores') {
         if (contadoresView) contadoresView.classList.add('active');
         pageTitle.innerHTML = i18n('page_title_contadores');
@@ -517,20 +516,37 @@ function updateHeaderButtons(view) {
 }
 
 // API Calls
+const pendingDataRequests = new Map();
+
+async function fetchDataOnce(endpoint) {
+    if (pendingDataRequests.has(endpoint)) {
+        return pendingDataRequests.get(endpoint);
+    }
+
+    const request = fetch(endpoint)
+        .then(async response => {
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || `Request failed: ${response.status}`);
+            }
+            return data;
+        })
+        .finally(() => pendingDataRequests.delete(endpoint));
+
+    pendingDataRequests.set(endpoint, request);
+    return request;
+}
+
 async function fetchAccounts() {
     try {
-        const res = await fetch(`${API_URL}/accounts`);
-        if (res.ok) {
-            accounts = await res.json();
+        accounts = await fetchDataOnce(`${API_URL}/accounts`);
+        if (accounts) {
             await autoMigrateOtpSecrets();
             renderAccounts();
             updateFilterOptions();
             if (currentView === 'vacantes') renderVacantes();
             if (currentView === 'dashboard') renderDashboard();
             if (currentView === 'otp') renderOtpView();
-        } else {
-            console.warn("Error fetching accounts:", await res.json());
-            accounts = [];
         }
     } catch (e) { console.error(e); accounts = []; }
 }
@@ -580,29 +596,21 @@ function syncCharacterTypesWithDatabase() {
 
 async function fetchCharacters() {
     try {
-        const res = await fetch(`${API_URL}/characters`);
-        if (res.ok) {
-            characters = await res.json();
+        characters = await fetchDataOnce(`${API_URL}/characters`);
+        if (characters) {
             syncCharacterTypesWithDatabase();
             renderCharacters();
             if (currentView === 'vacantes') renderVacantes();
             if (currentView === 'dashboard') renderDashboard();
-        } else {
-            console.warn("Error fetching characters:", await res.json());
-            characters = [];
         }
     } catch (e) { console.error(e); characters = []; }
 }
 
 async function fetchItems() {
     try {
-        const res = await fetch(`${API_URL}/items`);
-        if (res.ok) {
-            items = await res.json();
+        items = await fetchDataOnce(`${API_URL}/items`);
+        if (items) {
             renderItems();
-        } else {
-            console.warn("Error fetching items:", await res.json());
-            items = [];
         }
     } catch (e) { console.error(e); items = []; }
 }

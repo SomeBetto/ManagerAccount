@@ -24,16 +24,18 @@ echo   [1] Iniciar Aplicación
 echo   [2] Actualizar Aplicación (Git Pull)
 echo   [3] Detener / Quitar de Ejecución
 echo   [4] Reparar Instalación y Dependencias
-echo   [5] Salir
+echo   [5] Ver Logs del Servidor
+echo   [6] Salir
 echo.
 echo ==========================================================
-set /p opcion="Seleccione una opción [1-5]: "
+set /p opcion="Seleccione una opción [1-6]: "
 
 if "%opcion%"=="1" goto INICIAR
 if "%opcion%"=="2" goto ACTUALIZAR
 if "%opcion%"=="3" goto DETENER
 if "%opcion%"=="4" goto REPARAR
-if "%opcion%"=="5" goto SALIR
+if "%opcion%"=="5" goto VER_LOGS
+if "%opcion%"=="6" goto SALIR
 
 echo.
 echo [!] Opción no válida. Intente de nuevo.
@@ -68,13 +70,14 @@ if !errorlevel! equ 0 (
 
 echo [*] Iniciando servidor en segundo plano...
 cd backend
-if exist "venv\Scripts\pythonw.exe" (
-    start "" "venv\Scripts\pythonw.exe" run.py
+if not exist "log" mkdir "log"
+if exist "venv\Scripts\python.exe" (
+    start "" /b cmd /c ""venv\Scripts\python.exe" run.py >> "log\server.log" 2>&1"
     goto SERVER_STARTED
 )
 
-if exist "venv\Scripts\python.exe" (
-    start "" "venv\Scripts\python.exe" run.py
+if exist "venv\Scripts\pythonw.exe" (
+    start "" /b "venv\Scripts\pythonw.exe" run.py >> "log\server.log" 2>&1
     goto SERVER_STARTED
 )
 
@@ -88,6 +91,37 @@ start "" http://localhost:5000
 cd /d "%~dp0"
 
 echo [OK] Servidor iniciado correctamente en http://localhost:5000
+echo.
+pause
+goto MENU
+
+:VER_LOGS
+cls
+echo ==========================================================
+echo             LOGS DE MANAGER ACCOUNT
+echo ==========================================================
+echo.
+
+if not exist "backend\log" mkdir "backend\log"
+
+echo ------------------- server.log --------------------------
+if exist "backend\log\server.log" (
+    powershell -NoProfile -Command "Get-Content -Path 'backend\log\server.log' -Tail 80"
+) else (
+    echo No existe server.log. Inicia la aplicacion para generarlo.
+)
+
+echo.
+echo ------------------- error.log ---------------------------
+if exist "backend\log\error.log" (
+    powershell -NoProfile -Command "Get-Content -Path 'backend\log\error.log' -Tail 80"
+) else (
+    echo No existe error.log. Todavia no se han registrado errores del backend.
+)
+
+echo.
+echo Se muestran las ultimas 80 lineas de cada archivo.
+echo Puedes seleccionar esta opcion nuevamente despues de intentar iniciar.
 echo.
 pause
 goto MENU
